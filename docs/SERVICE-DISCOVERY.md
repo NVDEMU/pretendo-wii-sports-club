@@ -50,7 +50,7 @@ This helper is **not** the Wii U-facing `account.nintendo.net` service and does 
 
 ## What is still missing
 
-This repo does **not** currently host `account.nintendo.net`, implement the account-server TLS/client-certificate flow, create or link PNIDs, or control Pretendo/WiiLink's public DNS records. As a result, an unmodified Wii U still needs a compatible account/service-discovery integration that returns this project's auth endpoint for `game_server_id=1012F100`.
+This repo does **not** host `account.nintendo.net`, implement the account-server TLS/client-certificate flow, create or link PNIDs, or control Pretendo/WiiLink's public DNS records. It now includes an optional [route patch for a self-hosted/authorized Pretendo Account Server](../integrations/pretendo-account/README.md), but that patch is not deployed to either provider's hosted service. An unmodified Wii U still needs the actual account/service-discovery request to reach a compatible service that returns this project's auth endpoint for `game_server_id=1012F100`.
 
 DNS configuration alone is insufficient: the DNS resolver must route the HTTPS account hostname and the account response must advertise this server. The public DNS providers are operated separately; this repository cannot add routes to their deployed configuration. Avoid inventing another service hostname or copying an account endpoint from a different game.
 
@@ -58,7 +58,7 @@ DNS configuration alone is insufficient: the DNS resolver must route the HTTPS a
 
 1. Use the sourced values in [ENDPOINT-REFERENCE.md](ENDPOINT-REFERENCE.md) and [the machine-readable endpoint file](../config/wii-sports-club-endpoints.json) as the implementation baseline.
 2. For a Wii U that you own, capture only the DNS names and connection metadata during a Wii Sports Club startup. The exact game request path and game ID are documented; the capture now helps confirm which resolver path the console actually takes and what happens before/after the token request.
-3. Select an account/service-discovery strategy we can legitimately operate: an authorized account-server integration, or a controlled test setup that redirects/patches the service-discovery path. A plain standalone HTTP endpoint on a custom hostname is not sufficient while the unmodified client expects the Nintendo account hostname and TLS/client-certificate behavior.
+3. For a self-hosted/authorized Pretendo Account Server, review and test the route integration in [integrations/pretendo-account](../integrations/pretendo-account/README.md). For public Pretendo/WiiLink DNS, the provider must configure the request path, or use a controlled test setup that redirects/patches service discovery. A plain standalone HTTP endpoint on a custom hostname is not sufficient while the unmodified client expects the Nintendo account hostname and TLS/client-certificate behavior.
 4. Return a fresh per-session NEX password/token and the community authentication host/UDP port, with safe association to the authenticated user's existing PID.
 5. Verify the secure station URL advertises the community secure host/UDP port.
 6. Test login, club data, rankings, matchmaking, and each sport separately. Run both DNS-path tests only once the required service-discovery routing is actually available.
