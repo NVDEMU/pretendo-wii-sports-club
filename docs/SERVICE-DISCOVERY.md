@@ -17,6 +17,30 @@ References: [Pretendo NEX overview](https://nintendo-wiki.pretendo.network/docs/
 
 The response is XML with `host`, `port`, `pid`, `nex_password`, and `token` fields. The `host`/`port` returned here must reach the **authentication server**, not the secure server. The current community port choices are UDP 60014 for authentication and UDP 60015 for secure NEX. After authentication, this repo's server advertises the secure station URL from `SECURE_SERVER_LOCATION` and `SECURE_SERVER_PORT`.
 
+## Private token bridge now included
+
+The authentication container now has an optional **internal-only** route that a compatible account proxy can call after it has authenticated the Wii U account and resolved the user's existing PID:
+
+```http
+POST http://wsc-authentication:8080/internal/wsc/nex-token
+Authorization: Bearer <WSC_INTERNAL_API_TOKEN>
+Content-Type: application/json
+
+{"pid":123456789}
+```
+
+It returns the XML `nex_token` response with the configured public authentication host and UDP port. It also creates a fresh random NEX session password, stores it for that PID in the configured NEX account collection, and returns it in the XML response. The same token is used for `token` and `nex_password` to match the public WSC server implementation pattern.
+
+Enable this route only when integrating with a trusted account proxy:
+
+- Set `WSC_INTERNAL_API_TOKEN` to a random secret of at least 32 characters (for example, generate 32 random bytes with `openssl rand -hex 32`).
+- Set `NEX_AUTH_PUBLIC_HOST` to a public hostname/IP that routes to UDP 60014.
+- Optionally set `NEX_AUTH_PUBLIC_PORT` (defaults to 60014).
+- Keep TCP 8080 private on the Compose network. It is deliberately **not** published to the host.
+- The caller must authenticate the account and provide the PID resolved for that account. Never expose this internal route directly to the internet or accept a client-supplied PID without authentication.
+
+This helper is **not** the Wii U-facing `account.nintendo.net` service and does not modify either provider's DNS. A compatible account proxy still needs to intercept the account-server request, authenticate it, call this helper, and return the XML response to the Wii U.
+
 ## What the repo currently implements
 
 - NEX authentication service: UDP 60014, configured for WSC access key `4d324052` and NEX version 3.4.0.
