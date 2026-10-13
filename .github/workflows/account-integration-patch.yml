@@ -35,8 +35,8 @@ jobs:
 
       - name: Verify and apply route patch
         run: |
-          git -C /tmp/pretendo-account apply --check "$GITHUB_WORKSPACE/integrations/pretendo-account/provider-route.patch"
-          git -C /tmp/pretendo-account apply "$GITHUB_WORKSPACE/integrations/pretendo-account/provider-route.patch"
+          git -C /tmp/pretendo-account apply --ignore-whitespace --check "$GITHUB_WORKSPACE/integrations/pretendo-account/provider-route.patch"
+          git -C /tmp/pretendo-account apply --ignore-whitespace "$GITHUB_WORKSPACE/integrations/pretendo-account/provider-route.patch"
 
       - name: Install upstream dependencies and type-check patched account server
         working-directory: /tmp/pretendo-account
