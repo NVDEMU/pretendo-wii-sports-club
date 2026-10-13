@@ -1,0 +1,49 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - wsc_mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  wsc-secure:
+    image: ghcr.io/nvdemu/pretendo-wii-sports-club-secure:main
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017/}
+      KERBEROS_PASSWORD: ${KERBEROS_PASSWORD:?Set KERBEROS_PASSWORD in .env}
+      WSC_DATASTORE_PATH: /data/datastore.json
+    volumes:
+      - wsc_secure_data:/data
+    ports:
+      - "60015:60015/udp"
+
+  wsc-authentication:
+    image: ghcr.io/nvdemu/pretendo-wii-sports-club-authentication:main
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017/}
+      NEX_ACCOUNTS_DATABASE: ${NEX_ACCOUNTS_DATABASE:-wsc}
+      NEX_ACCOUNTS_COLLECTION: ${NEX_ACCOUNTS_COLLECTION:-nexaccounts}
+      KERBEROS_PASSWORD: ${KERBEROS_PASSWORD:?Set KERBEROS_PASSWORD in .env}
+      SECURE_SERVER_LOCATION: ${SECURE_SERVER_LOCATION:?Set SECURE_SERVER_LOCATION in .env}
+      SECURE_SERVER_PORT: ${SECURE_SERVER_PORT:-60015}
+      WSC_INTERNAL_API_TOKEN: ${WSC_INTERNAL_API_TOKEN:-}
+      NEX_AUTH_PUBLIC_HOST: ${NEX_AUTH_PUBLIC_HOST:-}
+      NEX_AUTH_PUBLIC_PORT: ${NEX_AUTH_PUBLIC_PORT:-60014}
+    ports:
+      - "60014:60014/udp"
+
+volumes:
+  wsc_mongo_data:
+  wsc_secure_data:
