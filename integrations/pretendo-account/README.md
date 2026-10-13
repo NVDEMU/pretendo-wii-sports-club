@@ -1,29 +1,43 @@
-# Self-hosted account-server integration
+# Pretendo account-route integration for existing PNIDs
 
-The Wii U obtains its NEX authentication endpoint from the account server route:
+This patch is intended for the existing Pretendo account service. It does **not** create a replacement account network and does not change individual players' PNID/NEX account records.
+
+The Wii U requests a NEX token from:
 
 `GET /v1/api/provider/nex_token/@me?game_server_id=1012F100`
 
-A successful DNS lookup only proves that the hostname resolves; it does not prove that this route returns this project's endpoint.
+For this WSC-only game-server ID, the route uses the already-authenticated PNID and resolves its existing NEX account/PID. It verifies the WSC title ID, derives a WSC-specific password, creates and registers a short-lived NEX token, then returns the community auth host/port in the XML response. All other game routes remain unchanged.
 
-## Route behavior and title IDs
+## Required account-service configuration
 
-The route patch checks the game-server ID `1012F100` separately from the Wii U application's title ID. It accepts the candidate WSC title IDs recorded in [the endpoint metadata](../../config/wii-sports-club-endpoints.json), requires the authenticated PNID to have a Pretendo NEX account, and passes that account's `nexAccount.pid` to the WSC bridge. Pretendo's PNID PID (`pnid.pid`) and game/NEX PID (`nexAccount.pid`) are distinct fields and must not be confused. Client-supplied PIDs are never accepted. The generic route for other game-server IDs stays intact. The allowlist contains candidate regional/version IDs because public title maps differ; capture the actual `x-nintendo-title-id` from your own test request, redact credentials, and verify that ID before broadening the allowlist.
+On the authorized account-service deployment, configure:
 
-The [Account-server integration patch check](../../.github/workflows/account-integration-patch.yml) applies this patch to a pinned upstream baseline and runs the account server's TypeScript compiler. That validates patch application and typing, but it does not deploy the route or prove a live Wii U request.
+- `WSC_NEX_AUTH_HOST`: public host/IP of the WSC authentication server.
+- `WSC_NEX_AUTH_PORT=60014`.
+- `WSC_NEX_PASSWORD_SECRET`: random value of at least 32 bytes (a 64-character hex value is recommended).
 
-Pretendo Account Server has a route in `src/services/nnas/routes/provider.ts`. In that implementation, the account server selects a registered server based on `game_server_id`, then returns its host/port plus NEX account credentials. For a self-hosted or explicitly authorized account server, the next integration task is to route only WSC game server ID `1012F100` to this project's private token bridge, leaving all other games on the existing route.
+The **exact same** `WSC_NEX_PASSWORD_SECRET` must be configured in the WSC authentication container. Both sides use the secret's UTF-8 bytes as an HMAC-SHA256 key and the NEX PID in base-10 decimal as the message. Different values cause login failure because the client and server derive different passwords.
 
-## Required configuration for an authorized deployment
+The secret is a server-to-server configuration value, not the player's PNID password. Never commit it, paste it into a public issue, or include it in screenshots.
 
-- Configure `WSC_INTERNAL_API_TOKEN` with a long random secret in this project's environment and the same secret in the account-server process.
-- Configure `NEX_AUTH_PUBLIC_HOST` and `NEX_AUTH_PUBLIC_PORT=60014` for the public NEX auth endpoint.
-- Set `SECURE_SERVER_LOCATION` for the public secure-server endpoint and expose UDP 60014 and 60015.
-- Make the account-server process reach `http://wsc-authentication:8080/internal/wsc/nex-token` over a private network only. If they are not on the same Docker network, use a private address reachable only by the account server. Never publish the helper port to the public Internet.
-- Test using a dedicated test account and verify the returned XML and NEX login before trying actual matches.
+## WSC host configuration
 
-The private bridge provisions a random NEX account password on first use of a NEX PID and reuses it for later requests. A unique MongoDB index makes each PID map to one password even during concurrent first logins, and a retry handles the expected duplicate-key race. In the account-server integration, the account route creates a fresh 36-byte NEX token, stores only its SHA-256 hash in Pretendo's `NEXToken` collection with a one-hour expiry, and passes the exact raw token through the private bridge for the XML response. Direct local bridge calls may omit `token`, in which case the bridge generates one itself. This prevents concurrent token requests from changing the password during login. Treat the bridge as an internal service; it is not the Wii U-facing account API.
+The WSC host uses:
 
-## Public DNS-provider limitation
+```dotenv
+WSC_NEX_PASSWORD_SECRET=<same shared secret as the account service>
+SECURE_SERVER_LOCATION=<reachable host/IP of the secure/game server>
+SECURE_SERVER_PORT=60015
+```
 
-This repository cannot change Pretendo's or WiiLink's hosted service-discovery/account-server behavior or public DNS records. To support users of public Pretendo DNS or public WiiLink DNS, the relevant provider-operated account-server path has to route WSC to a compatible endpoint. This guide only applies to a server operator who can make that change; DNS lookups that succeed do not prove the route is configured.
+The account service's route advertises its configured auth host/IP on UDP 60014; the auth server then advertises the secure/game server on UDP 60015.
+
+No callback domain, DuckDNS name, or HTTPS token bridge is required by this design. A host that stays running and allows inbound UDP 60014/60015 is still necessary for Internet play.
+
+## Operator boundary and validation
+
+The [provider-route.patch](provider-route.patch) is a proposed WSC-only service integration. It can be applied by the Pretendo account-service operator or in an account-service deployment you are authorized to modify. This repository cannot push configuration into Pretendo's live service; the operator must approve/deploy the route or register an equivalent endpoint.
+
+The [account integration workflow](../../.github/workflows/account-integration-patch.yml) checks patch application and TypeScript compilation against the pinned upstream baseline. Passing those checks does not mean the hosted route has been deployed or that a Wii U login has succeeded. After deployment, verify the XML response using a test account, then test NEX authentication, club/profile data, rankings, matchmaking, and an actual match.
+
+Do not share players' PNID passwords, NEX passwords, tickets, tokens, or certificates in logs or issues.
