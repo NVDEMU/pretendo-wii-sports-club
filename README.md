@@ -54,7 +54,7 @@ Do not configure these two resolver IPs as primary and secondary and expect reco
 - `docker-compose.cloud.yml` — cloud runtime config with prebuilt images and persistent data volumes.
 - `scripts/smoke_test_internal_bridge.py` — end-to-end check of the internal token bridge against MongoDB.
 - `docs/SERVICE-DISCOVERY.md` — describes the Wii U account/service-discovery requirement.
-- `integrations/pretendo-account/provider-route.patch` — optional WSC-only bridge patch for a self-hosted or explicitly authorized Pretendo Account Server; see its [integration guide](integrations/pretendo-account/README.md).
+- `integrations/pretendo-account/provider-route.patch` — WSC-only provider-route integration for an authorized Pretendo account-service deployment; it uses existing PNIDs and a shared HMAC secret. See the [integration guide](integrations/pretendo-account/README.md).
 - `scripts/check_dns_routing.py` — queries a selected resolver for a verified hostname; can check the expected IPv4 result.
 - `.github/workflows/ci.yml` — Go builds, endpoint/DNS unit tests, Compose validation, container builds, and a Compose/MongoDB bridge smoke test.
 - `.github/workflows/dns-preflight.yml` — manually query a verified hostname through both public DNS resolvers.
@@ -79,9 +79,9 @@ For developers who do have Terminal available, see the [macOS/Codespaces quickst
 
 ## General Docker Compose setup
 
-For a host you control, copy `.env.example` to `.env`, set `KERBEROS_PASSWORD` to a long random secret, and set `SECURE_SERVER_LOCATION` to a reachable public host/IP before running `docker compose up --build -d`. See [deployment and live verification](docs/DEPLOYMENT.md) for public-host firewall, private bridge, and hardware verification details.
+For a host you control, copy `.env.example` to `.env`, set `KERBEROS_PASSWORD`, `WSC_NEX_PASSWORD_SECRET`, and `SECURE_SERVER_LOCATION`, then run `docker compose up --build -d`. The shared `WSC_NEX_PASSWORD_SECRET` must match the value configured on the authorized Pretendo account route. See [deployment and live verification](docs/DEPLOYMENT.md).
 
-The optional internal token bridge is disabled unless its secret and public auth host are configured. The stack does **not** create Pretendo Network IDs, write public DNS records, or alter hosted account-server behavior. **Existing Pretendo accounts are intended to remain unchanged:** the WSC-only provider-route integration takes the already-authenticated PNID and its associated NEX/game PID, then asks this revival's private bridge for a WSC-specific NEX password and session token. The WSC password is stored in this revival's own database; it is not the user's Pretendo password. The route integration does not reset a PNID, change its profile, or copy Pretendo's account database. It uses a shared server-side `WSC_NEX_PASSWORD_SECRET` to derive the same WSC-specific password from the existing NEX PID on the account route and authentication server. It changes service discovery only for Wii Sports Club's `game_server_id=1012F100`; the account-service operator must deploy or approve that route. This repository cannot change the hosted Pretendo endpoint, and setting Pretendo DNS alone does not make the console receive this project's endpoint.
+The stack does not create or modify Pretendo Network IDs or individual account records. The WSC-only provider route uses the authenticated PNID's existing NEX/game PID and derives a WSC-specific password using `WSC_NEX_PASSWORD_SECRET`; the WSC auth server derives the same value. It registers a short-lived NEX token and advertises this project's host/port only for Wii Sports Club's `game_server_id=1012F100`. The account-service operator must deploy or approve that route or register an equivalent endpoint. This repository cannot change the hosted Pretendo endpoint, and setting Pretendo DNS alone does not make the console receive this project's endpoint. The private HTTP bridge elsewhere in the repo is optional local/developer tooling, not a requirement for this public route.
 
 ## Provisioning a NEX test record
 
@@ -112,7 +112,7 @@ Only set `NEX_ACCOUNTS_DATABASE=pretendo` and `NEX_ACCOUNTS_COLLECTION=wsc_nexac
 - [x] Add Compose validation and container builds to CI.
 - [x] Add a real MongoDB/Compose internal-bridge smoke test to CI.
 - [x] Add a one-command local smoke-test path for macOS and a Codespaces devcontainer.
-- [x] Add an optional, WSC-only account-route integration patch for a self-hosted/authorized Pretendo Account Server.
+- [x] Add a WSC-only account-route patch that keeps existing Pretendo PNIDs unchanged and uses shared HMAC-derived game credentials.
 - [x] Resolver lookups through Pretendo and WiiLink DNS completed successfully (maintainer-reported); this does not confirm account-route behavior.
 - [ ] Deploy the route patch on an account server we control or obtain provider-side routing for game-server ID `1012F100`.
 - [ ] Obtain a public UDP-capable server endpoint and verify the UDP ports from an external network.
