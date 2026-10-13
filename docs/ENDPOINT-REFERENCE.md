@@ -63,7 +63,7 @@ Content-Type: application/json
 
 The account proxy calls this **only after** verifying the Wii U account/session and resolving its existing NEX PID. The helper stores a new random session password in the configured account collection and responds with `application/xml` in the documented `nex_token` shape, using `NEX_AUTH_PUBLIC_HOST` and `NEX_AUTH_PUBLIC_PORT` (default 60014). The secure server then remains separately advertised by the auth server at `SECURE_SERVER_LOCATION`:`SECURE_SERVER_PORT` (default UDP 60015).
 
-The helper requires a random `WSC_INTERNAL_API_TOKEN` at least 32 characters long. It listens on TCP 8080 inside the container network; `docker-compose.yml` intentionally does not publish that port to the public host. **Do not** expose the helper publicly or let the client choose an arbitrary PID. The helper is not a substitute for the Wii U-facing account server, HTTPS/TLS, the Pretendo/WiiLink DNS configuration, or the authenticated account proxy that calls it.
+The helper requires a random `WSC_INTERNAL_API_TOKEN` at least 32 characters long. It listens on TCP 8080 inside the container network; `docker-compose.yml` intentionally does not publish that port to the public host. **Do not** expose the helper publicly or let the client choose an arbitrary PID. The helper is not a substitute for the Wii U-facing account server, HTTPS/TLS, the Pretendo/WiiLink DNS configuration, or the authenticated account proxy that calls it. For self-hosted/authorized Pretendo account-server deployments, this repo now includes an optional [WSC-only route patch](../integrations/pretendo-account/README.md).
 
 ## Historical Nintendo endpoint — do not use for the community server
 
