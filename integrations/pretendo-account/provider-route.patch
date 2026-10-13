@@ -10,7 +10,7 @@ diff --git a/src/services/nnas/routes/provider.ts b/src/services/nnas/routes/pro
  import { TokenType } from '@/types/common/token-types';
 +import { SystemType } from '@/types/common/system-types';
  import { IndependentServiceToken } from '@/models/independent-service-token';
-@@ -148,19 +148,77 @@
+@@ -148,19 +148,78 @@
  	const nexAccount = await NEXAccount.findOne({
  		owning_pid: pnid.pid
  	});
@@ -30,6 +30,7 @@ diff --git a/src/services/nnas/routes/provider.ts b/src/services/nnas/routes/pro
  	}
  
 +	// WSC-only integration for an account server you operate or are authorized to modify.
++	// Keep the token bridge private; never expose its TCP port publicly.
 +	// PNID PID and NEX/game PID are distinct in Pretendo's account model.
 +	// Use the authenticated user's existing NEX account so client and game server agree on identity.
 +	const wscGameServerID = getValueFromQueryString(request.query, 'game_server_id');
