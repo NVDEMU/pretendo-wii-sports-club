@@ -122,3 +122,29 @@ jobs:
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.event.workflow_run.head_sha }}
+
+      - name: Verify Docker Hub image access and publish its direct link
+        if: steps.dockerhub.outputs.ready == 'true'
+        shell: bash
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+        run: |
+          set -uo pipefail
+          image="${DOCKERHUB_USERNAME}/pretendo-wii-sports-club-desktop:main"
+          url="https://hub.docker.com/r/${DOCKERHUB_USERNAME}/pretendo-wii-sports-club-desktop"
+          {
+            echo "### Docker Desktop download"
+            echo "- [Open the published Docker Hub image]($url)"
+            echo "- Image name: `$image`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Test this image anonymously, because Docker Desktop users need
+          # public registry access when pulling without credentials.
+          docker logout >/dev/null 2>&1 || true
+          if docker manifest inspect "$image" >/dev/null 2>&1; then
+            echo "Anonymous Docker Hub access verified."
+            echo "- Anonymous pull check: **passed**" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::Docker Hub publishing completed, but anonymous pull access failed. Open the linked repository, go to Settings → Visibility, make it public, and confirm the main tag exists."
+            echo "- Anonymous pull check: **failed**. In the linked repository, open Settings → Visibility → Make public, then verify the `main` tag." >> "$GITHUB_STEP_SUMMARY"
+          fi
