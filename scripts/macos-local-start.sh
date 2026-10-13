@@ -70,6 +70,6 @@ docker run --rm \
 
 echo
 echo "Local container smoke test passed."
-echo "View logs:  docker compose logs --tail=100 wsc-authentication wsc-secure"
-echo "Stop stack: docker compose down"
+echo "View logs:  docker compose -p wsc-local logs --tail=100 wsc-authentication wsc-secure"
+echo "Stop stack: docker compose -p wsc-local down"
 echo "This does NOT make the service reachable from the public Internet or a Wii U."
