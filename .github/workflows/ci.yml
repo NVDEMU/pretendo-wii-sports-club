@@ -1,4 +1,4 @@
-name: Go build checks
+name: WSC Build & Integration Tests (browser-run)
 
 on:
   push:
