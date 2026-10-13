@@ -20,7 +20,7 @@ Wii U does not discover its NEX authentication server just by looking up a game-
 
 That account response must return the community authentication hostname on UDP 60014, plus the authenticated PID and NEX credentials. After that handshake, this project's authentication server advertises the secure/game server on UDP 60015.
 
-The route patch is at [provider-route.patch](../integrations/pretendo-account/provider-route.patch). It cannot be installed on hosted Pretendo Network or WiiLink services from this repository, and this repository cannot edit their public DNS or account-server routes. **Using Pretendo DNS or WiiLink DNS by itself does not redirect the WSC account-service response to this project.**
+The route patch is at [provider-route.patch](../integrations/pretendo-account/provider-route.patch). **It does not modify Pretendo user accounts.** It uses the authenticated player's existing PNID/NEX PID and provisions a WSC-specific NEX password in this revival's own database; that password is separate from the player's Pretendo password. What must change is the *service-discovery route* for game-server ID `1012F100`, not the user's account. This repo cannot install the route on Pretendo's hosted account server or edit public DNS for Pretendo/WiiLink. **Using Pretendo DNS or WiiLink DNS by itself does not redirect the WSC account-service response to this project.**
 
 There are only two legitimate ways to bridge this final gap:
 
