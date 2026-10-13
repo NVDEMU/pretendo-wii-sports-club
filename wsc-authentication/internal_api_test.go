@@ -22,7 +22,7 @@ func TestValidPublicHost(t *testing.T) {
 }
 
 func TestInternalNEXTokenAPIRequiresBearerToken(t *testing.T) {
-	handler := newInternalNEXTokenHandler("test-only-long-secret", "nex.example.net", 60014)
+	handler := newInternalNEXTokenHandler("test-only-secret-with-at-least-32-characters", "nex.example.net", 60014)
 	request := httptest.NewRequest(http.MethodPost, "/internal/wsc/nex-token", bytes.NewBufferString(`{"pid":123}`))
 	request.Header.Set("Content-Type", "application/json")
 	response := httptest.NewRecorder()
@@ -34,9 +34,9 @@ func TestInternalNEXTokenAPIRequiresBearerToken(t *testing.T) {
 }
 
 func TestInternalNEXTokenAPIRejectsWrongMethod(t *testing.T) {
-	handler := newInternalNEXTokenHandler("test-only-long-secret", "nex.example.net", 60014)
+	handler := newInternalNEXTokenHandler("test-only-secret-with-at-least-32-characters", "nex.example.net", 60014)
 	request := httptest.NewRequest(http.MethodGet, "/internal/wsc/nex-token", nil)
-	request.Header.Set("Authorization", "Bearer test-only-long-secret")
+	request.Header.Set("Authorization", "Bearer test-only-secret-with-at-least-32-characters")
 	response := httptest.NewRecorder()
 
 	handler.ServeHTTP(response, request)
@@ -49,9 +49,9 @@ func TestInternalNEXTokenAPIRejectsWrongMethod(t *testing.T) {
 }
 
 func TestInternalNEXTokenAPIRejectsBadPIDWithoutDatabase(t *testing.T) {
-	handler := newInternalNEXTokenHandler("test-only-long-secret", "nex.example.net", 60014)
+	handler := newInternalNEXTokenHandler("test-only-secret-with-at-least-32-characters", "nex.example.net", 60014)
 	request := httptest.NewRequest(http.MethodPost, "/internal/wsc/nex-token", bytes.NewBufferString(`{"pid":0}`))
-	request.Header.Set("Authorization", "Bearer test-only-long-secret")
+	request.Header.Set("Authorization", "Bearer test-only-secret-with-at-least-32-characters")
 	request.Header.Set("Content-Type", "application/json")
 	response := httptest.NewRecorder()
 
@@ -62,9 +62,9 @@ func TestInternalNEXTokenAPIRejectsBadPIDWithoutDatabase(t *testing.T) {
 }
 
 func TestInternalNEXTokenAPIRejectsUnknownFields(t *testing.T) {
-	handler := newInternalNEXTokenHandler("test-only-long-secret", "nex.example.net", 60014)
+	handler := newInternalNEXTokenHandler("test-only-secret-with-at-least-32-characters", "nex.example.net", 60014)
 	request := httptest.NewRequest(http.MethodPost, "/internal/wsc/nex-token", bytes.NewBufferString(`{"pid":123,"password":"caller-controlled"}`))
-	request.Header.Set("Authorization", "Bearer test-only-long-secret")
+	request.Header.Set("Authorization", "Bearer test-only-secret-with-at-least-32-characters")
 	request.Header.Set("Content-Type", "application/json")
 	response := httptest.NewRecorder()
 
