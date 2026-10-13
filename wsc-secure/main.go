@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -265,7 +266,17 @@ func nexDateTime(t time.Time) uint64 {
 		uint64(t.Day())<<17 | uint64(t.Month())<<22 | uint64(t.Year())<<26
 }
 
-const dsStorePath = "datastore.json"
+// The default keeps source-only development simple. Container deployments
+// set WSC_DATASTORE_PATH to a path on a named persistent volume.
+func datastoreFilePath() string {
+	path := strings.TrimSpace(os.Getenv("WSC_DATASTORE_PATH"))
+	if path == "" {
+		return "datastore.json"
+	}
+	return path
+}
+
+var dsStorePath = datastoreFilePath()
 
 type dsStoreSnapshot struct {
 	NextID  uint64      `json:"next_id"`
@@ -285,6 +296,10 @@ func dsSave() {
 	b, err := json.Marshal(snap)
 	if err != nil {
 		fmt.Println("dsSave marshal:", err)
+		return
+	}
+	if err := os.MkdirAll(filepath.Dir(dsStorePath), 0755); err != nil {
+		fmt.Println("dsSave mkdir:", err)
 		return
 	}
 	if err := os.WriteFile(dsStorePath, b, 0644); err != nil {
