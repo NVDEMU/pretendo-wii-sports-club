@@ -6,7 +6,7 @@ diff --git a/src/services/nnas/routes/provider.ts b/src/services/nnas/routes/pro
  import express from 'express';
 +import got from 'got';
  import xmlbuilder from 'xmlbuilder';
-@@ -143,6 +144,48 @@
+@@ -143,6 +144,50 @@
  		}).end());
  
  		return;
@@ -44,6 +44,8 @@ diff --git a/src/services/nnas/routes/provider.ts b/src/services/nnas/routes/pro
 +				timeout: { request: 5000 },
 +				retry: { limit: 0 }
 +			}).text();
++			response.set('Cache-Control', 'no-store');
++			response.set('Pragma', 'no-cache');
 +			response.status(200).type('application/xml').send(tokenXML);
 +		} catch {
 +			console.error('[WSC NEX token bridge] Private token service request failed');
@@ -55,11 +57,11 @@ diff --git a/src/services/nnas/routes/provider.ts b/src/services/nnas/routes/pro
 +	}
 +
  	const nexAccount = await NEXAccount.findOne({
-@@ -166,3 +209,1 @@
+@@ -166,3 +211,1 @@
 -	const gameServerID = getValueFromQueryString(request.query, 'game_server_id');
 -
  	if (!gameServerID) {
-@@ -210,3 +251,1 @@
+@@ -210,3 +253,1 @@
 -	const titleID = getValueFromHeaders(request.headers, 'x-nintendo-title-id');
 -
  	if (!titleID) {
