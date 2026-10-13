@@ -56,3 +56,43 @@ jobs:
         run: docker build -t wsc-authentication ./wsc-authentication
       - name: Build secure-server image
         run: docker build -t wsc-secure ./wsc-secure
+
+  container-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Configure disposable smoke-test deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          export WSC_INTERNAL_API_TOKEN="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
+          KERBEROS_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
+          cat > .env <<EOF
+          KERBEROS_PASSWORD=${KERBEROS_PASSWORD}
+          SECURE_SERVER_LOCATION=wsc-smoke.example.invalid
+          SECURE_SERVER_PORT=60015
+          WSC_INTERNAL_API_TOKEN=${WSC_INTERNAL_API_TOKEN}
+          NEX_AUTH_PUBLIC_HOST=wsc-smoke.example.invalid
+          NEX_AUTH_PUBLIC_PORT=60014
+          MONGO_URI=mongodb://mongo:27017/
+          NEX_ACCOUNTS_DATABASE=wsc
+          NEX_ACCOUNTS_COLLECTION=nexaccounts
+          EOF
+          docker compose -p wsc-smoke up --build -d
+          echo "WSC_INTERNAL_API_TOKEN=$WSC_INTERNAL_API_TOKEN" >> "$GITHUB_ENV"
+
+      - name: Exercise bridge against real MongoDB container
+        run: |
+          docker run --rm --network wsc-smoke_default \
+            -v "$GITHUB_WORKSPACE/scripts/smoke_test_internal_bridge.py:/smoke.py:ro" \
+            -e WSC_INTERNAL_API_TOKEN="$WSC_INTERNAL_API_TOKEN" \
+            python:3.12-alpine python /smoke.py \
+              --host wsc-smoke.example.invalid --port 60014
+
+      - name: Stop smoke-test deployment
+        if: always()
+        run: |
+          docker compose -p wsc-smoke down --volumes --remove-orphans || true
+          rm -f .env
