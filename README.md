@@ -30,6 +30,7 @@ Do not configure these two resolver IPs as primary and secondary and expect reco
 - `wsc-authentication/` — NEX authentication service.
 - `wsc-secure/` — NEX secure/game service, including matchmaking and game data handlers.
 - `wsc-authentication/cmd/account-admin/` — command-line tool for provisioning a NEX password record for an existing PID.
+- `POST /internal/wsc/nex-token` on private TCP 8080 — optional authenticated helper for a trusted account proxy; not a public Wii U endpoint.
 - `docker-compose.yml` — local deployment scaffold with MongoDB.
 - `config/wii-sports-club-endpoints.json` — machine-readable endpoint metadata with source URLs and confidence notes.
 - `docs/ENDPOINT-REFERENCE.md` — sourced game-server ID, access key, account API route, historical Nintendo endpoint, and community ports.
@@ -47,7 +48,7 @@ The server components are based on the GPL-3.0-licensed Wii Sports Club server c
 4. Set `SECURE_SERVER_LOCATION` to a public host/IP that can actually be reached by test consoles.
 5. Run `docker compose up --build -d`.
 
-This starts both UDP server processes and MongoDB. It does **not** create Pretendo Network IDs, write public DNS records, or provide the missing Wii U account-server service-discovery integration.
+This starts both UDP server processes and MongoDB. The optional internal token bridge is disabled unless its secret and public auth host are configured. The stack does **not** create Pretendo Network IDs, write public DNS records, or provide the Wii U-facing account-server service-discovery integration.
 
 ## Provisioning a NEX test record
 
