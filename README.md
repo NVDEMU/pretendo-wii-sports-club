@@ -32,27 +32,39 @@ Do not configure these two resolver IPs as primary and secondary and expect reco
 - `wsc-authentication/cmd/account-admin/` — command-line tool for provisioning a NEX password record for an existing PID.
 - `POST /internal/wsc/nex-token` on private TCP 8080 — optional authenticated helper for a trusted account proxy; not a public Wii U endpoint.
 - `docker-compose.yml` — local deployment scaffold with MongoDB.
+- `docs/MACOS-QUICKSTART.md` — **Mac-first local setup and browser-based Codespaces setup; no local Linux installation required.**
+- `scripts/macos-local-start.sh` — creates a local-only environment, starts Compose, and runs the internal-bridge smoke test.
 - `config/wii-sports-club-endpoints.json` — machine-readable endpoint metadata with source URLs and confidence notes.
 - `docs/ENDPOINT-REFERENCE.md` — sourced game-server ID, access key, account API route, historical Nintendo endpoint, and community ports.
-- `docs/DEPLOYMENT.md` — Linux VPS setup, firewall, private account-service integration, and hardware verification sequence.
+- `docs/DEPLOYMENT.md` — public-server hosting, firewall, private account-service integration, and hardware verification sequence.
 - `scripts/smoke_test_internal_bridge.py` — end-to-end check of the internal token bridge against MongoDB.
 - `docs/SERVICE-DISCOVERY.md` — describes the Wii U account/service-discovery requirement.
 - `integrations/pretendo-account/provider-route.patch` — optional WSC-only bridge patch for a self-hosted or explicitly authorized Pretendo Account Server; see its [integration guide](integrations/pretendo-account/README.md).
 - `scripts/check_dns_routing.py` — queries a selected resolver for a verified hostname; can check the expected IPv4 result.
-- `.github/workflows/ci.yml` — Go builds, endpoint/DNS unit tests, Compose validation, and container builds.
+- `.github/workflows/ci.yml` — Go builds, endpoint/DNS unit tests, Compose validation, container builds, and a Compose/MongoDB bridge smoke test.
 - `.github/workflows/dns-preflight.yml` — manually query a verified hostname through both public DNS resolvers.
 
 The server components are based on the GPL-3.0-licensed Wii Sports Club server code published by [BrewtendoNetwork/Wii-Sports-Club](https://github.com/BrewtendoNetwork/Wii-Sports-Club). The upstream license and attribution are retained. This is a separate community-maintained project, not an official Pretendo release.
 
-## Quick start: build the services
+## Quick start for a Mac
 
-1. Install Docker and Docker Compose.
-2. Copy `.env.example` to `.env`.
-3. Set `KERBEROS_PASSWORD` to a long random secret.
-4. Set `SECURE_SERVER_LOCATION` to a public host/IP that can actually be reached by test consoles.
-5. Run `docker compose up --build -d`.
+You do **not** need to install Linux. Install [Docker Desktop for Mac](https://docs.docker.com/desktop/setup/install/mac-install/), open it, then run these commands in Terminal:
 
-This starts both UDP server processes and MongoDB. The optional internal token bridge is disabled unless its secret and public auth host are configured. The stack does **not** create Pretendo Network IDs, write public DNS records, or alter hosted account-server behavior. The optional account-server patch is only for an account service you operate or are authorized to modify.
+```sh
+git clone https://github.com/NVDEMU/pretendo-wii-sports-club.git
+cd pretendo-wii-sports-club
+bash scripts/macos-local-start.sh
+```
+
+The script creates local-only development secrets if `.env` does not already exist, starts MongoDB and both server containers, and runs an end-to-end check of the private bridge. It preserves an existing `.env`; if that file is incomplete, review the error rather than posting the file anywhere. Full steps and a browser-based alternative are in [the macOS/Codespaces quickstart](docs/MACOS-QUICKSTART.md).
+
+**Important:** this local setup advertises `localhost` and is for testing only. It does not make the service reachable from the Internet or a Wii U. Actual online tests still need a public host with inbound UDP 60014/60015 and an authorized, compatible account/service-discovery route.
+
+## General Docker Compose setup
+
+For a host you control, copy `.env.example` to `.env`, set `KERBEROS_PASSWORD` to a long random secret, and set `SECURE_SERVER_LOCATION` to a reachable public host/IP before running `docker compose up --build -d`. See [deployment and live verification](docs/DEPLOYMENT.md) for public-host firewall, private bridge, and hardware verification details.
+
+The optional internal token bridge is disabled unless its secret and public auth host are configured. The stack does **not** create Pretendo Network IDs, write public DNS records, or alter hosted account-server behavior. The optional account-server patch is only for an account service you operate or are authorized to modify.
 
 ## Provisioning a NEX test record
 
@@ -79,9 +91,12 @@ Only set `NEX_ACCOUNTS_DATABASE=pretendo` and `NEX_ACCOUNTS_COLLECTION=wsc_nexac
 - [x] Record sourced WSC NEX ID/access key, account-server token route, response fields, known title IDs, and historical Nintendo endpoint.
 - [x] Add endpoint metadata checks to CI.
 - [x] Add Compose validation and container builds to CI.
+- [x] Add a real MongoDB/Compose internal-bridge smoke test to CI.
+- [x] Add a one-command local smoke-test path for macOS and a Codespaces devcontainer.
 - [x] Add an optional, WSC-only account-route integration patch for a self-hosted/authorized Pretendo Account Server.
 - [x] Resolver lookups through Pretendo and WiiLink DNS completed successfully (maintainer-reported); this does not confirm account-route behavior.
 - [ ] Deploy the route patch on an account server we control or obtain provider-side routing for game-server ID `1012F100`.
+- [ ] Obtain a public UDP-capable server endpoint and verify the UDP ports from an external network.
 - [ ] Capture Wii U startup traffic and confirm the account response advertises this project's authentication host/port.
 - [ ] Verify login and Wii Sports Club traffic through each DNS profile independently.
 - [ ] Add captured-packet regression tests for login, club data, rankings, matchmaking, and each sport.
