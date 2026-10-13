@@ -1,42 +1,44 @@
 # Wii U service discovery: remaining integration boundary
 
-## Why the NEX ports alone do not finish the connection
+## Confirmed request and game identifier
 
-This repository includes two UDP NEX services:
+The Wii U obtains its NEX game-server location from the account-server token route, not from a Switch-style game-server DNS lookup. The documented request is:
 
-- Authentication service: UDP 60014
-- Secure/game service: UDP 60015
+```http
+GET https://account.nintendo.net/v1/api/provider/nex_token/@me?game_server_id=1012F100
+```
 
-The authentication service advertises the secure server's host and port using `SECURE_SERVER_LOCATION` and `SECURE_SERVER_PORT`. Those settings control the station URL returned *after a client has reached this authentication service*.
+- Account host: `account.nintendo.net`
+- Path: `/v1/api/provider/nex_token/@me`
+- Wii Sports Club game-server ID: `1012F100`
+- NEX access key used by the WSC server: `4d324052`
 
-They do not, by themselves, make an unmodified Wii U client discover or connect to this project's authentication server. Pretendo's NEX documentation notes that Wii U game-server location is requested from the account server via `/provider/nex_token/@me`. The account/service-discovery route must therefore be confirmed and configured as well.
+References: [Pretendo NEX overview](https://nintendo-wiki.pretendo.network/docs/nex/), [NintendoClients Account Server documentation](https://github.com/kinnay/NintendoClients/wiki/Account-Server), [WSC NEX metadata](https://github.com/PretendoNetwork/nex-viewer/blob/master/src/nex/titles/wii-sports-club.ts).
 
-Reference: [Pretendo Network's NEX overview](https://nintendo-wiki.pretendo.network/docs/nex/).
+The response is XML with `host`, `port`, `pid`, `nex_password`, and `token` fields. The `host`/`port` returned here must reach the **authentication server**, not the secure server. The current community port choices are UDP 60014 for authentication and UDP 60015 for secure NEX. After authentication, this repo's server advertises the secure station URL from `SECURE_SERVER_LOCATION` and `SECURE_SERVER_PORT`.
 
-## Required next integration
+## What the repo currently implements
 
-1. Capture one clean Wii Sports Club startup with a console configured to use a known DNS profile. Record DNS queries, TCP/TLS destinations, and UDP destinations; redact account tokens and secrets.
-2. Identify the service-discovery request and the exact response field that supplies the NEX station URL. Do not assume a hostname from a different game is correct.
-3. Determine which routing setup the test environment uses:
-   - an authorized Pretendo-compatible account/service registry that returns the community server URL;
-   - a project-controlled DNS/HTTP(S) relay with the relevant host mappings; or
-   - a game/client patch that selects the community endpoint.
-4. Implement and test the selected path separately for Pretendo DNS and WiiLink DNS. The public resolvers are independently operated and this repository cannot change their records.
-5. Test with a new or dedicated test account before using any real account. Never publish passwords, tickets, access keys, session tokens, or raw authenticated requests.
+- NEX authentication service: UDP 60014, configured for WSC access key `4d324052` and NEX version 3.4.0.
+- NEX secure service: UDP 60015, configured for the same game access key and NEX version.
+- The authentication server advertises a secure station URL via environment variables.
+- Account PID/password lookup is backed by the configurable MongoDB account collection.
 
-## Account store modes
+## What is still missing
 
-The authentication service now reads its PID/password records from the configured MongoDB database and collection:
+This repo does **not** currently host `account.nintendo.net`, implement the account-server TLS/client-certificate flow, create or link PNIDs, or control Pretendo/WiiLink's public DNS records. As a result, an unmodified Wii U still needs a compatible account/service-discovery integration that returns this project's auth endpoint for `game_server_id=1012F100`.
 
-- `NEX_ACCOUNTS_DATABASE` (defaults to `wsc`)
-- `NEX_ACCOUNTS_COLLECTION` (defaults to `nexaccounts`)
+DNS configuration alone is insufficient: the DNS resolver must route the HTTPS account hostname and the account response must advertise this server. The public DNS providers are operated separately; this repository cannot add routes to their deployed configuration. Avoid inventing another service hostname or copying an account endpoint from a different game.
 
-For a separately administered deployment, the included `cmd/account-admin` utility can add a NEX password record for an **existing PID**. It does not mint a Pretendo Network ID, change the PID associated with a console, or grant access to Pretendo's private databases.
+## Implementation plan
 
-Only configure `NEX_ACCOUNTS_DATABASE=pretendo` and `NEX_ACCOUNTS_COLLECTION=wsc_nexaccounts` when you operate or have explicit authorized access to that compatible database. A stock local Compose deployment does not contain PNID data, so it will not authenticate a PNID automatically.
+1. Use the sourced values in [ENDPOINT-REFERENCE.md](ENDPOINT-REFERENCE.md) and [the machine-readable endpoint file](../config/wii-sports-club-endpoints.json) as the implementation baseline.
+2. For a Wii U that you own, capture only the DNS names and connection metadata during a Wii Sports Club startup. The exact game request path and game ID are documented; the capture now helps confirm which resolver path the console actually takes and what happens before/after the token request.
+3. Select an account/service-discovery strategy we can legitimately operate: an authorized account-server integration, or a controlled test setup that redirects/patches the service-discovery path. A plain standalone HTTP endpoint on a custom hostname is not sufficient while the unmodified client expects the Nintendo account hostname and TLS/client-certificate behavior.
+4. Return a fresh per-session NEX password/token and the community authentication host/UDP port, with safe association to the authenticated user's existing PID.
+5. Verify the secure station URL advertises the community secure host/UDP port.
+6. Test login, club data, rankings, matchmaking, and each sport separately. Run both DNS-path tests only once the required service-discovery routing is actually available.
 
-## Resolver preflight
+## Security rules for capture/testing
 
-Use `scripts/check_dns_routing.py` to query the documented Pretendo or WiiLink resolver for a hostname confirmed from packet captures or trusted docs. Optionally pass `--expected-ip` to assert the returned A records contain the expected address.
-
-The script does not invent or discover the game's private service hostnames, alter upstream DNS, or prove that a UDP NEX endpoint is reachable. A passing A-record check is one component of service-discovery validation, not an end-to-end test.
+Use a dedicated test account. Never commit PNID passwords, device certificates, NEX passwords, tickets, bearer tokens, session tokens, or raw authenticated payloads. A packet capture can contain credentials even if the filename looks innocuous; sanitize it before sharing.
