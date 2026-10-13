@@ -37,6 +37,7 @@ Do not configure these two resolver IPs as primary and secondary and expect reco
 - `docs/SERVICE-DISCOVERY.md` — explains the still-missing account/service-discovery bridge.
 - `scripts/check_dns_routing.py` — queries a selected resolver for a verified hostname; can check the expected IPv4 result.
 - `.github/workflows/ci.yml` — Go builds, endpoint/DNS unit tests, Compose validation, and container builds.
+- `.github/workflows/dns-preflight.yml` — manually query a verified hostname through both public DNS resolvers.
 
 The server components are based on the GPL-3.0-licensed Wii Sports Club server code published by [BrewtendoNetwork/Wii-Sports-Club](https://github.com/BrewtendoNetwork/Wii-Sports-Club). The upstream license and attribution are retained. This is a separate community-maintained project, not an official Pretendo release.
 
