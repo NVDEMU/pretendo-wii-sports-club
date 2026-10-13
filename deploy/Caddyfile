@@ -1,9 +1,0 @@
-{
-  email {$ACME_EMAIL}
-}
-
-{$WSC_BRIDGE_DOMAIN} {
-  @bridge path /internal/wsc/nex-token
-  reverse_proxy @bridge wsc-authentication:8080
-  respond "not found" 404
-}
