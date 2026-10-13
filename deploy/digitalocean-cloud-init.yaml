@@ -1,0 +1,105 @@
+#cloud-config
+# DigitalOcean Ubuntu 24.04 user-data bootstrap.
+# Paste this file into Droplet creation > Additional Options > Startup scripts.
+# It installs Docker, pulls only public GHCR images, persists game/Mongo data,
+# and refreshes the running image tags after successful CI publishes them.
+write_files:
+  - path: /usr/local/sbin/wsc-bootstrap
+    owner: root:root
+    permissions: "0750"
+    content: |
+      #!/usr/bin/env bash
+      set -Eeuo pipefail
+      exec > >(tee -a /var/log/wsc-bootstrap.log) 2>&1
+
+      echo "Starting WSC server bootstrap: $(date -Is)"
+      apt-get update
+      DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl gnupg git openssl
+
+      install -m 0755 -d /etc/apt/keyrings
+      curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+      chmod a+r /etc/apt/keyrings/docker.asc
+      . /etc/os-release
+      CODENAME="$VERSION_CODENAME"
+      ARCH="$(dpkg --print-architecture)"
+      echo "deb [arch=$ARCH signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $CODENAME stable" > /etc/apt/sources.list.d/docker.list
+      apt-get update
+      DEBIAN_FRONTEND=noninteractive apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+      systemctl enable --now docker
+
+      PUBLIC_IP="$(curl -fsS --max-time 5 http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address)"
+      if [[ ! "$PUBLIC_IP" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+        echo "Could not determine this Droplet's public IPv4 address" >&2
+        exit 1
+      fi
+
+      install -d -m 0750 /opt/pretendo-wii-sports-club
+      git clone --depth 1 --branch main https://github.com/NVDEMU/pretendo-wii-sports-club.git /opt/pretendo-wii-sports-club
+      cd /opt/pretendo-wii-sports-club
+
+      KERBEROS_PASSWORD="$(openssl rand -hex 32)"
+      INTERNAL_API_TOKEN="$(openssl rand -hex 32)"
+      cat > .env <<EOF
+      KERBEROS_PASSWORD=$KERBEROS_PASSWORD
+      SECURE_SERVER_LOCATION=$PUBLIC_IP
+      SECURE_SERVER_PORT=60015
+      MONGO_URI=mongodb://mongo:27017/
+      NEX_ACCOUNTS_DATABASE=wsc
+      NEX_ACCOUNTS_COLLECTION=nexaccounts
+      WSC_INTERNAL_API_TOKEN=$INTERNAL_API_TOKEN
+      NEX_AUTH_PUBLIC_HOST=$PUBLIC_IP
+      NEX_AUTH_PUBLIC_PORT=60014
+      EOF
+      chmod 0600 .env
+
+      # Public images must already exist and be marked Public in GitHub Packages.
+      docker compose --env-file .env -f docker-compose.cloud.yml pull
+      docker compose --env-file .env -f docker-compose.cloud.yml up -d --remove-orphans
+
+      echo "WSC containers started. Public IP: $PUBLIC_IP"
+      echo "Ports required in the provider firewall: UDP 60014 and UDP 60015."
+      echo "Do NOT publish TCP 8080 or MongoDB port 27017."
+      echo "Public Wii U login is not configured until the account/service-discovery route is integrated."
+
+  - path: /usr/local/sbin/wsc-update-containers
+    owner: root:root
+    permissions: "0750"
+    content: |
+      #!/usr/bin/env bash
+      set -Eeuo pipefail
+      cd /opt/pretendo-wii-sports-club
+      docker compose --env-file .env -f docker-compose.cloud.yml pull
+      docker compose --env-file .env -f docker-compose.cloud.yml up -d --remove-orphans
+
+  - path: /etc/systemd/system/wsc-update-containers.service
+    owner: root:root
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=Update Wii Sports Club server to the latest CI-published container images
+      Wants=docker.service
+      After=docker.service network-online.target
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/local/sbin/wsc-update-containers
+
+  - path: /etc/systemd/system/wsc-update-containers.timer
+    owner: root:root
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=Periodically check for validated Wii Sports Club container images
+
+      [Timer]
+      OnBootSec=10min
+      OnUnitActiveSec=10min
+      Persistent=true
+
+      [Install]
+      WantedBy=timers.target
+
+runcmd:
+  - ["/usr/local/sbin/wsc-bootstrap"]
+  - ["systemctl", "daemon-reload"]
+  - ["systemctl", "enable", "--now", "wsc-update-containers.timer"]
