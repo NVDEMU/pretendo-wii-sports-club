@@ -110,7 +110,23 @@ def main() -> int:
     if len(tokens) != len(parsed):
         raise AssertionError("each request must receive a distinct session token")
 
-    print("PASS: private bridge auth, XML schema, no-store, race-safe stable PID password, and unique rotating tokens")
+    supplied_token = "A" * 48  # Base64 for exactly 36 bytes, matching the account-server token format.
+    supplied_status, _, supplied_body = request(
+        args.url, "POST", token=token, payload={"pid": args.pid + 1, "token": supplied_token}
+    )
+    if supplied_status != 200:
+        raise AssertionError(f"valid supplied token returned HTTP {supplied_status}: {supplied_body[:300]!r}")
+    supplied = parse_token_xml(supplied_body)
+    if supplied["token"] != supplied_token:
+        raise AssertionError("bridge did not preserve the token registered by the account server")
+
+    bad_status, _, _ = request(
+        args.url, "POST", token=token, payload={"pid": args.pid + 2, "token": "not-valid"}
+    )
+    if bad_status != 400:
+        raise AssertionError(f"malformed supplied token should return HTTP 400, got {bad_status}")
+
+    print("PASS: private bridge auth, XML schema, no-store, race-safe stable PID password, unique tokens, and token pass-through")
     return 0
 
 

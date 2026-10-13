@@ -25,7 +25,8 @@ import (
 const internalAPIPort = "8080"
 
 type internalNEXTokenRequest struct {
-	PID uint32 `json:"pid"`
+	PID   uint32 `json:"pid"`
+	Token string `json:"token,omitempty"`
 }
 
 type internalNEXTokenResponse struct {
@@ -128,11 +129,20 @@ func newInternalNEXTokenHandler(apiToken, publicHost string, publicPort uint16) 
 			http.Error(w, "could not issue NEX credentials", http.StatusInternalServerError)
 			return
 		}
-		token, err := makeSessionToken()
-		if err != nil {
-			logger.Warning(err.Error())
-			http.Error(w, "could not issue NEX credentials", http.StatusInternalServerError)
-			return
+		token := request.Token
+		if token == "" {
+			token, err = makeSessionToken()
+			if err != nil {
+				logger.Warning(err.Error())
+				http.Error(w, "could not issue NEX credentials", http.StatusInternalServerError)
+				return
+			}
+		} else {
+			tokenBytes, decodeErr := base64.StdEncoding.DecodeString(token)
+			if decodeErr != nil || len(tokenBytes) != 36 {
+				http.Error(w, "token must be valid base64 for exactly 36 bytes", http.StatusBadRequest)
+				return
+			}
 		}
 
 		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)

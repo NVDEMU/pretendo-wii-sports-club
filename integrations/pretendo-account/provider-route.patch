@@ -6,7 +6,11 @@ diff --git a/src/services/nnas/routes/provider.ts b/src/services/nnas/routes/pro
  import express from 'express';
 +import got from 'got';
  import xmlbuilder from 'xmlbuilder';
-@@ -148,19 +148,63 @@
+@@ -6,2 +6,3 @@
+ import { TokenType } from '@/types/common/token-types';
++import { SystemType } from '@/types/common/system-types';
+ import { IndependentServiceToken } from '@/models/independent-service-token';
+@@ -148,19 +148,77 @@
  	const nexAccount = await NEXAccount.findOne({
  		owning_pid: pnid.pid
  	});
@@ -51,18 +55,32 @@ diff --git a/src/services/nnas/routes/provider.ts b/src/services/nnas/routes/pro
 +			} } }).end());
 +			return;
 +		}
++		const wscToken = crypto.randomBytes(36).toString('base64');
++		const issuedAt = new Date();
 +		try {
 +			const tokenXML = await got.post(bridgeURL, {
 +				headers: { authorization: 'Bearer ' + bridgeToken },
-+				json: { pid: nexAccount.pid },
++				json: { pid: nexAccount.pid, token: wscToken },
 +				timeout: { request: 5000 },
 +				retry: { limit: 0 }
 +			}).text();
++			await NEXToken.create({
++				token: crypto.createHash('sha256').update(wscToken).digest('hex'),
++				game_server_id: wscGameServerID,
++				pid: nexAccount.pid,
++				info: {
++					system_type: SystemType.WUP,
++					token_type: TokenType.NEX,
++					title_id: BigInt(parseInt(titleID, 16)),
++					issued: issuedAt,
++					expires: new Date(issuedAt.getTime() + (3600 * 1000))
++				}
++			});
 +			response.set('Cache-Control', 'no-store');
 +			response.set('Pragma', 'no-cache');
 +			response.status(200).type('application/xml').send(tokenXML);
 +		} catch {
-+			console.error('[WSC NEX token bridge] Private token service request failed');
++			console.error('[WSC NEX account integration] Token issuance or registration failed');
 +			response.status(503).type('application/xml').send(xmlbuilder.create({ errors: { error: {
 +				code: '2002', message: 'Wii Sports Club service is temporarily unavailable'
 +			} } }).end());

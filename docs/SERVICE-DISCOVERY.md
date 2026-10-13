@@ -29,7 +29,7 @@ Content-Type: application/json
 {"pid":123456789}
 ```
 
-It returns the XML `nex_token` response with the configured public authentication host and UDP port. It creates a random NEX account password on first use of a PID and stores it in the configured NEX account collection; later requests for that PID reuse the stored password. The response's `token` field is generated separately for each request and is never reused as the password.
+It returns the XML `nex_token` response with the configured public authentication host and UDP port. It creates a random NEX account password on first use of a NEX PID and stores it in the configured NEX account collection; later requests for that PID reuse the stored password. An authorized account route may supply a valid 36-byte Base64 token; the bridge preserves it so the route can register its hash in Pretendo's `NEXToken` collection. Local bridge calls that omit a token receive a newly generated one.
 
 Enable this route only when integrating with a trusted account proxy:
 

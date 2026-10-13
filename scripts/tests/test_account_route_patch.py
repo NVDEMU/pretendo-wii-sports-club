@@ -34,8 +34,11 @@ class AccountRoutePatchSafetyTests(unittest.TestCase):
         self.assertEqual(len(ids), len(set(ids)))
 
     def test_bridge_uses_the_authenticated_users_existing_nex_pid(self):
-        self.assertIn("json: { pid: nexAccount.pid }", self.patch)
+        self.assertIn("json: { pid: nexAccount.pid, token: wscToken }", self.patch)
         self.assertNotIn("json: { pid: pnid.pid }", self.patch)
+        self.assertIn("await NEXToken.create({", self.patch)
+        self.assertIn("crypto.createHash('sha256').update(wscToken).digest('hex')", self.patch)
+        self.assertIn("system_type: SystemType.WUP", self.patch)
         self.assertNotIn("request.body.pid", self.patch)
         self.assertNotIn("request.query.pid", self.patch)
         self.assertIn("process.env.WSC_INTERNAL_API_URL", self.patch)
