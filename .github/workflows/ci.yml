@@ -39,10 +39,24 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Validate macOS bootstrap script and Codespaces configuration
+      - name: Validate browser and cloud bootstrap configuration
         run: |
           bash -n scripts/macos-local-start.sh
           python -m json.tool .devcontainer/devcontainer.json > /dev/null
+          python -m pip install --quiet PyYAML
+          python - <<'PY'
+          import pathlib
+          import subprocess
+          import yaml
+
+          config = yaml.safe_load(pathlib.Path("deploy/digitalocean-cloud-init.yaml").read_text())
+          files = {entry["path"]: entry["content"] for entry in config.get("write_files", [])}
+          for path in ("/usr/local/sbin/wsc-bootstrap", "/usr/local/sbin/wsc-update-containers"):
+              if path not in files:
+                  raise SystemExit(f"cloud-init does not define {path}")
+              subprocess.run(["bash", "-n"], input=files[path], text=True, check=True)
+          print("Cloud-init YAML and embedded shell scripts are valid.")
+          PY
       - name: Test DNS packet parsing
         run: python -m unittest discover -s scripts/tests -v
 
