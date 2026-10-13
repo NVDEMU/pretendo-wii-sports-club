@@ -1,0 +1,47 @@
+name: Account-server integration patch check
+
+on:
+  push:
+    paths:
+      - "integrations/pretendo-account/**"
+      - ".github/workflows/account-integration-patch.yml"
+  pull_request:
+    paths:
+      - "integrations/pretendo-account/**"
+      - ".github/workflows/account-integration-patch.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  patch-and-typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out this project
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: /tmp/pretendo-account/package-lock.json
+
+      - name: Check out the documented account-server baseline
+        run: |
+          git init /tmp/pretendo-account
+          git -C /tmp/pretendo-account remote add origin https://github.com/PretendoNetwork/account.git
+          git -C /tmp/pretendo-account fetch --depth=1 origin 629e0f89833cdc947322e446a8194e6aa88e149b
+          git -C /tmp/pretendo-account checkout --detach FETCH_HEAD
+
+      - name: Verify and apply route patch
+        run: |
+          git -C /tmp/pretendo-account apply --check "$GITHUB_WORKSPACE/integrations/pretendo-account/provider-route.patch"
+          git -C /tmp/pretendo-account apply "$GITHUB_WORKSPACE/integrations/pretendo-account/provider-route.patch"
+
+      - name: Install upstream dependencies and type-check patched account server
+        working-directory: /tmp/pretendo-account
+        run: |
+          npm ci
+          npx tsc --noEmit
