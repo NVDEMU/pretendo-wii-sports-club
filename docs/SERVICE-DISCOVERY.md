@@ -29,7 +29,7 @@ Content-Type: application/json
 {"pid":123456789}
 ```
 
-It returns the XML `nex_token` response with the configured public authentication host and UDP port. It creates a fresh random NEX session password, stores it for that PID in the configured NEX account collection, and returns it as `nex_password`. The response's `token` field is a separately generated random value; it is not reused as the password.
+It returns the XML `nex_token` response with the configured public authentication host and UDP port. It creates a random NEX account password on first use of a PID and stores it in the configured NEX account collection; later requests for that PID reuse the stored password. The response's `token` field is generated separately for each request and is never reused as the password.
 
 Enable this route only when integrating with a trusted account proxy:
 
