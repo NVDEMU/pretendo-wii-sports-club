@@ -73,7 +73,7 @@ func newInternalNEXTokenHandler(apiToken, publicHost string, publicPort uint16) 
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		if apiToken == "" || publicPort == 0 || !validPublicHost(publicHost) {
+		if len(apiToken) < 32 || publicPort == 0 || !validPublicHost(publicHost) {
 			http.Error(w, "internal NEX token service is not configured", http.StatusServiceUnavailable)
 			return
 		}
@@ -155,7 +155,7 @@ func newInternalNEXTokenHandler(apiToken, publicHost string, publicPort uint16) 
 		w.Header().Set("Pragma", "no-cache")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(append([]byte(xml.Header), body...))
-		logger.Warning(fmt.Sprintf("Issued WSC NEX token for PID %d", request.PID))
+		fmt.Printf("Issued WSC NEX session credential for PID %d\n", request.PID)
 	})
 	return mux
 }
@@ -167,8 +167,8 @@ func startInternalNEXTokenAPI() {
 		fmt.Println("WSC internal NEX token API disabled (optional configuration not set)")
 		return
 	}
-	if apiToken == "" || !validPublicHost(publicHost) {
-		fmt.Fprintln(os.Stderr, "WSC internal NEX token API configuration invalid: set WSC_INTERNAL_API_TOKEN and a valid NEX_AUTH_PUBLIC_HOST together")
+	if len(apiToken) < 32 || !validPublicHost(publicHost) {
+		fmt.Fprintln(os.Stderr, "WSC internal NEX token API configuration invalid: set a 32+ character WSC_INTERNAL_API_TOKEN and a valid NEX_AUTH_PUBLIC_HOST together")
 		os.Exit(2)
 	}
 
