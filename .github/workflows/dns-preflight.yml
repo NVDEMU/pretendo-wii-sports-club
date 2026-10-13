@@ -1,0 +1,44 @@
+name: Live DNS endpoint preflight
+
+on:
+  workflow_dispatch:
+    inputs:
+      hostname:
+        description: "Verified hostname to query (default is Wii U account-server host)"
+        required: true
+        default: "account.nintendo.net"
+      expected_ip:
+        description: "Optional expected IPv4 address; leave blank to inspect current answers"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  resolver-preflight:
+    name: Check ${{ matrix.profile }} DNS
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        profile:
+          - pretendo
+          - wiilink
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Query verified hostname
+        env:
+          HOSTNAME_TO_QUERY: ${{ inputs.hostname }}
+          EXPECTED_IP: ${{ inputs.expected_ip }}
+        run: |
+          args=(--profile "${{ matrix.profile }}" --hostname "$HOSTNAME_TO_QUERY")
+          if [[ -n "$EXPECTED_IP" ]]; then
+            args+=(--expected-ip "$EXPECTED_IP")
+          fi
+          python scripts/check_dns_routing.py "${args[@]}"
