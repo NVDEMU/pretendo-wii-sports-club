@@ -45,6 +45,19 @@ python3 scripts/check_dns_routing.py --profile pretendo --hostname VERIFIED_HOST
 
 Replace both example values with values from the deployment and real service configuration. The tool checks an A/CNAME answer from the selected resolver; it does not update DNS, discover game hostnames, check TLS, or prove that UDP traffic reaches the NEX server.
 
+## Run a live resolver check
+
+The repository has an on-demand [Live DNS endpoint preflight workflow](../actions/workflows/dns-preflight.yml) that queries the same verified hostname through both resolvers. It defaults to `account.nintendo.net`, the documented Wii U account-server host. Run it from the GitHub Actions tab and inspect the A/CNAME answers for both profiles. You can supply an expected IPv4 address to make the check fail when it differs.
+
+You can also run the same script locally:
+
+```sh
+python3 scripts/check_dns_routing.py --profile pretendo --hostname account.nintendo.net
+python3 scripts/check_dns_routing.py --profile wiilink --hostname account.nintendo.net
+```
+
+A DNS answer is not enough to prove that the `/provider/nex_token/@me` request is routed to a compatible account service or that its XML response advertises our NEX authentication server.
+
 ## Validation checklist
 
 For each DNS profile separately:
