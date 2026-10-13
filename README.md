@@ -37,6 +37,7 @@ Do not configure these two resolver IPs as primary and secondary and expect reco
 - `docs/MACOS-QUICKSTART.md` — **Mac-first local setup and browser-based Codespaces setup; no local Linux installation required.**
 - `scripts/macos-local-start.sh` — creates a local-only environment, starts Compose, and runs the internal-bridge smoke test.
 - `docs/DOCKER-DESKTOP-GUI.md` — run a single-container local bundle through Docker Desktop's graphical Run dialog, with no Terminal.
+- `docs/ONLINE-READINESS.md` — remaining account/service-discovery requirements and post-publish hosting steps.
 - `deploy/Dockerfile.desktop` — bundles MongoDB and both WSC servers in a single image for GUI-only local testing.
 - `deploy/start-wsc-desktop.sh` — starts and supervises the local bundle processes.
 - `config/wii-sports-club-endpoints.json` — machine-readable endpoint metadata with source URLs and confidence notes.
