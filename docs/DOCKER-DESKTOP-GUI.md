@@ -15,7 +15,7 @@ Docker Desktop's Images search is designed around Docker Hub. To pull this proje
 5. In this GitHub repository, open **Settings → Secrets and variables → Actions → New repository secret**. Add these two secrets:
    - Name: `DOCKERHUB_USERNAME`; value: your Docker Hub username.
    - Name: `DOCKERHUB_TOKEN`; value: the token you just created (not your Docker password).
-6. Return to [GitHub Actions](../actions). The next successful push to `main` will run the publisher and upload the GUI bundle to your Docker Hub repository. Confirm that `main` and a commit-SHA tag appear on Docker Hub.
+6. Open [GitHub Actions](../actions), choose **Publish tested WSC containers**, click **Run workflow**, keep the branch set to `main`, and confirm. This republishes the latest `main` revision and uploads the GUI bundle to your Docker Hub repository when both secrets are present. Confirm that `main` and a commit-SHA tag appear on Docker Hub. The automated publisher also runs after a successful main-branch CI result.
 
 GitHub secrets are entered directly in GitHub's settings page and are not committed to the repository. Never paste the token into source code, an issue, a chat, or a public log. Official instructions: [GitHub Actions repository secrets](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets).
 
