@@ -1,0 +1,66 @@
+diff --git a/src/services/nnas/routes/provider.ts b/src/services/nnas/routes/provider.ts
+--- a/src/services/nnas/routes/provider.ts
++++ b/src/services/nnas/routes/provider.ts
+@@
+ import crypto from 'node:crypto';
+ import express from 'express';
++import got from 'got';
+ import xmlbuilder from 'xmlbuilder';
+@@
+ router.get('/nex_token/@me', async (request: express.Request, response: express.Response): Promise<void> => {
+ 	const pnid = request.pnid;
+@@
+ 		return;
+ 	}
+ 
++	// WSC-only integration for an account server you operate or are authorized to modify.
++	// Keep the target bridge on a private network; never expose its TCP port publicly.
++	const gameServerID = getValueFromQueryString(request.query, 'game_server_id');
++	const titleID = getValueFromHeaders(request.headers, 'x-nintendo-title-id');
++	if (gameServerID?.toUpperCase() === '1012F100') {
++		const allowedTitleIDs = new Set([
++			'000500001012F100', '0005000010144C00', '0005000010144D00',
++			'0005000010144E00', '0005000010171E00'
++		]);
++		if (!titleID || !allowedTitleIDs.has(titleID.toUpperCase())) {
++			response.send(xmlbuilder.create({ errors: { error: {
++				code: '1021', message: 'The requested game server was not found'
++			} } }).end());
++			return;
++		}
++
++		const bridgeURL = process.env.WSC_INTERNAL_API_URL ||
++			'http://wsc-authentication:8080/internal/wsc/nex-token';
++		const bridgeToken = process.env.WSC_INTERNAL_API_TOKEN;
++		if (!bridgeToken || bridgeToken.length < 32) {
++			response.status(503).type('application/xml').send(xmlbuilder.create({ errors: { error: {
++				code: '2002', message: 'Wii Sports Club service is not configured'
++			} } }).end());
++			return;
++		}
++		try {
++			const tokenXML = await got.post(bridgeURL, {
++				headers: { authorization: 'Bearer ' + bridgeToken },
++				json: { pid: pnid.pid },
++				timeout: { request: 5000 },
++				retry: { limit: 0 }
++			}).text();
++			response.status(200).type('application/xml').send(tokenXML);
++		} catch {
++			console.error('[WSC NEX token bridge] Private token service request failed');
++			response.status(503).type('application/xml').send(xmlbuilder.create({ errors: { error: {
++				code: '2002', message: 'Wii Sports Club service is temporarily unavailable'
++			} } }).end());
++		}
++		return;
++	}
++
+ 	const nexAccount = await NEXAccount.findOne({
+@@
+-	const gameServerID = getValueFromQueryString(request.query, 'game_server_id');
+-
+ 	if (!gameServerID) {
+@@
+-	const titleID = getValueFromHeaders(request.headers, 'x-nintendo-title-id');
+-
+ 	if (!titleID) {
