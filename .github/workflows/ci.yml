@@ -79,6 +79,46 @@ jobs:
         run: docker build -t wsc-authentication ./wsc-authentication
       - name: Build secure-server image
         run: docker build -t wsc-secure ./wsc-secure
+      - name: Build single-container Docker Desktop bundle
+        run: docker build -f deploy/Dockerfile.desktop -t wsc-desktop:ci .
+      - name: Smoke test single-container Docker Desktop bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          cleanup() {
+            docker logs wsc-desktop-smoke || true
+            docker rm -f wsc-desktop-smoke >/dev/null 2>&1 || true
+            docker volume rm wsc-desktop-smoke-data >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          docker volume create wsc-desktop-smoke-data >/dev/null
+          docker run -d --name wsc-desktop-smoke \
+            --publish 127.0.0.1:16014:60014/udp \
+            --publish 127.0.0.1:16015:60015/udp \
+            --volume wsc-desktop-smoke-data:/data \
+            --env KERBEROS_PASSWORD=ci-only-local-test-secret \
+            --env SECURE_SERVER_LOCATION=localhost \
+            wsc-desktop:ci
+          ready=false
+          for attempt in $(seq 1 90); do
+            state="$(docker inspect --format '{{.State.Status}}' wsc-desktop-smoke)"
+            if [[ "$state" == "exited" ]]; then
+              echo "Desktop bundle exited during startup" >&2
+              exit 1
+            fi
+            health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' wsc-desktop-smoke)"
+            if [[ "$health" == "healthy" ]]; then
+              ready=true
+              break
+            fi
+            sleep 2
+          done
+          if [[ "$ready" != true ]]; then
+            echo "Desktop bundle did not become healthy" >&2
+            docker logs wsc-desktop-smoke || true
+            exit 1
+          fi
+          echo "PASS: MongoDB and both WSC server processes are healthy in the single-container GUI bundle."
 
   container-smoke:
     runs-on: ubuntu-latest
