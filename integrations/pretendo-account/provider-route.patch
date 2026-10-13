@@ -1,43 +1,19 @@
 diff --git a/src/services/nnas/routes/provider.ts b/src/services/nnas/routes/provider.ts
 --- a/src/services/nnas/routes/provider.ts
 +++ b/src/services/nnas/routes/provider.ts
-@@ -1,3 +1,4 @@
- import crypto from 'node:crypto';
- import express from 'express';
-+import got from 'got';
- import xmlbuilder from 'xmlbuilder';
 @@ -6,2 +6,3 @@
  import { TokenType } from '@/types/common/token-types';
 +import { SystemType } from '@/types/common/system-types';
  import { IndependentServiceToken } from '@/models/independent-service-token';
-@@ -148,19 +148,78 @@
- 	const nexAccount = await NEXAccount.findOne({
- 		owning_pid: pnid.pid
- 	});
- 
- 	if (!nexAccount) {
- 		response.status(404).send(xmlbuilder.create({
- 			errors: {
- 				error: {
- 					cause: '',
- 					code: '0008',
- 					message: 'Not Found'
- 				}
- 			}
- 		}).end());
- 
- 		return;
- 	}
- 
-+	// WSC-only integration for an account server you operate or are authorized to modify.
-+	// Keep the token bridge private; never expose its TCP port publicly.
-+	// PNID PID and NEX/game PID are distinct in Pretendo's account model.
-+	// Use the authenticated user's existing NEX account so client and game server agree on identity.
+@@ -166,1 +166,67 @@
++	// WSC-only route for Wii Sports Club; all other game routes remain unchanged.
++	// This uses the authenticated player's existing Pretendo NEX PID; it does not change account records.
 +	const wscGameServerID = getValueFromQueryString(request.query, 'game_server_id');
 +	if (wscGameServerID?.toUpperCase() === '1012F100') {
 +		const titleID = getValueFromHeaders(request.headers, 'x-nintendo-title-id');
-+		const allowedTitleIDs = new Set([
 +			'000500001012F100', '0005000010144C00', '0005000010144D00',
++			'0005000010144E00', '0005000010171E00'
++			'0005000010144E00', '0005000010144D00',
 +			'0005000010144E00', '0005000010171E00'
 +		]);
 +		if (!titleID || !allowedTitleIDs.has(titleID.toUpperCase())) {
@@ -47,24 +23,25 @@ diff --git a/src/services/nnas/routes/provider.ts b/src/services/nnas/routes/pro
 +			return;
 +		}
 +
-+		const bridgeURL = process.env.WSC_INTERNAL_API_URL ||
-+			'http://wsc-authentication:8080/internal/wsc/nex-token';
-+		const bridgeToken = process.env.WSC_INTERNAL_API_TOKEN;
-+		if (!bridgeToken || bridgeToken.length < 32) {
++		const wscAuthHost = process.env.WSC_NEX_AUTH_HOST?.trim();
++		const wscAuthPort = Number(process.env.WSC_NEX_AUTH_PORT || '60014');
++		const wscPasswordSecret = process.env.WSC_NEX_PASSWORD_SECRET || '';
++		if (!wscAuthHost || /[\\s/\\\\<>]/.test(wscAuthHost) ||
++			!Number.isInteger(wscAuthPort) || wscAuthPort < 1 || wscAuthPort > 65535 ||
++			Buffer.byteLength(wscPasswordSecret, 'utf8') < 32) {
 +			response.status(503).type('application/xml').send(xmlbuilder.create({ errors: { error: {
 +				code: '2002', message: 'Wii Sports Club service is not configured'
 +			} } }).end());
 +			return;
 +		}
++
++		// Must match deriveWSCNEXPassword() in wsc-authentication/utility.go.
++		const wscNexPassword = crypto.createHmac('sha256', wscPasswordSecret)
++			.update(String(nexAccount.pid)).digest('hex');
 +		const wscToken = crypto.randomBytes(36).toString('base64');
 +		const issuedAt = new Date();
 +		try {
-+			const tokenXML = await got.post(bridgeURL, {
-+				headers: { authorization: 'Bearer ' + bridgeToken },
-+				json: { pid: nexAccount.pid, token: wscToken },
-+				timeout: { request: 5000 },
-+				retry: { limit: 0 }
-+			}).text();
++			// Register the token; the existing PNID/NEX account record is untouched.
 +			await NEXToken.create({
 +				token: crypto.createHash('sha256').update(wscToken).digest('hex'),
 +				game_server_id: wscGameServerID,
@@ -77,11 +54,18 @@ diff --git a/src/services/nnas/routes/provider.ts b/src/services/nnas/routes/pro
 +					expires: new Date(issuedAt.getTime() + (3600 * 1000))
 +				}
 +			});
++			const tokenXML = xmlbuilder.create({ nex_token: {
++				host: wscAuthHost,
++				nex_password: wscNexPassword,
++				pid: nexAccount.pid,
++				port: wscAuthPort,
++				token: wscToken
++			} }).end();
 +			response.set('Cache-Control', 'no-store');
 +			response.set('Pragma', 'no-cache');
 +			response.status(200).type('application/xml').send(tokenXML);
 +		} catch {
-+			console.error('[WSC NEX account integration] Token issuance or registration failed');
++			console.error('[WSC NEX account route] Token registration failed');
 +			response.status(503).type('application/xml').send(xmlbuilder.create({ errors: { error: {
 +				code: '2002', message: 'Wii Sports Club service is temporarily unavailable'
 +			} } }).end());

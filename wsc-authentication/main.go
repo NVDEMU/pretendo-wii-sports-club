@@ -21,6 +21,10 @@ func main() {
 		fmt.Fprintln(os.Stderr, "KERBEROS_PASSWORD is required")
 		os.Exit(2)
 	}
+	if passwordSecret := strings.TrimSpace(os.Getenv("WSC_NEX_PASSWORD_SECRET")); passwordSecret != "" && len([]byte(passwordSecret)) < 32 {
+		fmt.Fprintln(os.Stderr, "WSC_NEX_PASSWORD_SECRET must contain at least 32 bytes when configured")
+		os.Exit(2)
+	}
 	if err := connectMongo(); err != nil {
 		fmt.Fprintf(os.Stderr, "NEX account database startup failed: %v\n", err)
 		os.Exit(1)

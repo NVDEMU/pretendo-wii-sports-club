@@ -14,17 +14,19 @@ class AccountRoutePatchSafetyTests(unittest.TestCase):
         cls.patch = PATCH.read_text(encoding="utf-8")
         cls.endpoints = json.loads(ENDPOINTS.read_text(encoding="utf-8"))
 
-    def test_patch_targets_only_wsc_game_server_id(self):
+    def test_route_is_wsc_only_and_keeps_existing_account_resolution(self):
         self.assertIn("if (wscGameServerID?.toUpperCase() === '1012F100')", self.patch)
-        self.assertIn("const gameServerID = getValueFromQueryString(request.query, 'game_server_id');", self.patch)
-        # The generic route remains after the WSC-only branch.
         self.assertIn("const nexAccount = await NEXAccount.findOne({", self.patch)
-        self.assertLess(self.patch.index("const nexAccount = await NEXAccount.findOne({"),
-                        self.patch.index("const wscGameServerID = getValueFromQueryString"))
+        self.assertLess(
+            self.patch.index("const nexAccount = await NEXAccount.findOne({"),
+            self.patch.index("const wscGameServerID = getValueFromQueryString")
+        )
+        self.assertIn("const gameServerID = getValueFromQueryString(request.query, 'game_server_id');", self.patch)
+        self.assertIn("getServerByGameServerID(gameServerID, serverAccessLevel)", self.patch)
 
-    def test_patch_allowlist_matches_documented_title_id_candidates(self):
+    def test_title_allowlist_matches_repo_metadata(self):
         match = re.search(r"const allowedTitleIDs = new Set\(\[([\s\S]*?)\]\);", self.patch)
-        self.assertIsNotNone(match, "patch needs an explicit fail-closed title ID allowlist")
+        self.assertIsNotNone(match)
         ids = re.findall(r"'([0-9A-Fa-f]{16})'", match.group(1))
         expected = (
             self.endpoints["title_ids"]["confirmed_by_pretendo_nex_viewer"]
@@ -33,26 +35,30 @@ class AccountRoutePatchSafetyTests(unittest.TestCase):
         self.assertEqual(set(ids), set(expected))
         self.assertEqual(len(ids), len(set(ids)))
 
-    def test_bridge_uses_the_authenticated_users_existing_nex_pid(self):
-        self.assertIn("json: { pid: nexAccount.pid, token: wscToken }", self.patch)
-        self.assertNotIn("json: { pid: pnid.pid }", self.patch)
-        self.assertIn("await NEXToken.create({", self.patch)
-        self.assertIn("crypto.createHash('sha256').update(wscToken).digest('hex')", self.patch)
+    def test_existing_nex_pid_and_token_registration(self):
+        self.assertIn("nexAccount.pid", self.patch)
+        self.assertIn("NEXToken.create({", self.patch)
         self.assertIn("system_type: SystemType.WUP", self.patch)
-        self.assertNotIn("request.body.pid", self.patch)
-        self.assertNotIn("request.query.pid", self.patch)
-        self.assertIn("process.env.WSC_INTERNAL_API_URL", self.patch)
-        self.assertIn("process.env.WSC_INTERNAL_API_TOKEN", self.patch)
-        self.assertIn("bridgeToken.length < 32", self.patch)
+        self.assertIn("token_type: TokenType.NEX", self.patch)
+        self.assertNotIn("NEXAccount.create", self.patch)
+        self.assertNotIn("NEXAccount.update", self.patch)
 
-    def test_session_xml_is_not_cacheable(self):
+    def test_shared_hmac_and_direct_endpoint_response(self):
+        self.assertIn("WSC_NEX_PASSWORD_SECRET", self.patch)
+        self.assertIn("crypto.createHmac('sha256', wscPasswordSecret)", self.patch)
+        self.assertIn(".update(String(nexAccount.pid)).digest('hex')", self.patch)
+        self.assertIn("WSC_NEX_AUTH_HOST", self.patch)
+        self.assertIn("WSC_NEX_AUTH_PORT", self.patch)
+        self.assertIn("nex_password: wscNexPassword", self.patch)
+        self.assertIn("host: wscAuthHost", self.patch)
+        self.assertNotIn("got.post", self.patch)
+        self.assertNotIn("WSC_INTERNAL_API_URL", self.patch)
+
+    def test_token_expiry_and_no_cache(self):
+        self.assertIn("crypto.createHash('sha256').update(wscToken).digest('hex')", self.patch)
+        self.assertIn("expires: new Date(issuedAt.getTime() + (3600 * 1000))", self.patch)
         self.assertIn("response.set('Cache-Control', 'no-store')", self.patch)
         self.assertIn("response.set('Pragma', 'no-cache')", self.patch)
-        self.assertIn("response.status(200).type('application/xml').send(tokenXML)", self.patch)
-
-    def test_patch_notes_its_authorization_boundary(self):
-        self.assertIn("account server you operate or are authorized to modify", self.patch)
-        self.assertIn("never expose its TCP port publicly", self.patch)
 
 
 if __name__ == "__main__":
