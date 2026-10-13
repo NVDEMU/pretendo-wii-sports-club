@@ -6,7 +6,7 @@ diff --git a/src/services/nnas/routes/provider.ts b/src/services/nnas/routes/pro
  import express from 'express';
 +import got from 'got';
  import xmlbuilder from 'xmlbuilder';
-@@ -148,19 +148,62 @@
+@@ -148,19 +148,63 @@
  	const nexAccount = await NEXAccount.findOne({
  		owning_pid: pnid.pid
  	});
