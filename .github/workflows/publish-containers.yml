@@ -121,4 +121,4 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/pretendo-wii-sports-club-desktop:${{ github.event.workflow_run.head_sha }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.event.workflow_run.head_sha || github.sha }}
+            org.opencontainers.image.revision=${{ github.event.workflow_run.head_sha }}
