@@ -45,6 +45,8 @@ Docker Desktop's image details show the image size and provide actions for remov
 
 The image starts a local MongoDB instance, then launches the authentication server and secure/game server. No MongoDB port is exposed on the host.
 
+**This is not a website.** The bundle serves the game over UDP on ports 60014 and 60015, so opening a port as `http://localhost:60014` or `http://localhost:60015` can produce an HTTP 404 or no response; that alone does not mean the container failed. Verify it in Docker Desktop → **Containers** → `wsc-local` → **Logs**. If Docker Desktop itself shows an HTTP 404 popup immediately after you click **Run** and no container appears, that is a different Docker Desktop error; capture the complete popup and check whether `wsc-local` appears in Containers.
+
 ## D. Check the result
 
 1. Open **Containers** in Docker Desktop.
