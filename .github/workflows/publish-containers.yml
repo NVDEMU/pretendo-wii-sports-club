@@ -70,7 +70,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and publish the tested image
+      - name: Build and publish the tested image to GHCR
         if: steps.current.outputs.is_current == 'true'
         uses: docker/build-push-action@v6
         with:
@@ -80,6 +80,45 @@ jobs:
           tags: |
             ${{ matrix.image }}:main
             ${{ matrix.image }}:${{ github.event.workflow_run.head_sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.event.workflow_run.head_sha }}
+
+      - name: Check whether Docker Hub publishing is configured
+        id: dockerhub
+        if: >-
+          ${{ steps.current.outputs.is_current == 'true' &&
+              matrix.image == 'ghcr.io/nvdemu/pretendo-wii-sports-club-desktop' }}
+        shell: bash
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          if [[ -n "$DOCKERHUB_USERNAME" && -n "$DOCKERHUB_TOKEN" ]]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "Docker Hub publishing is configured."
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Docker Hub publishing is skipped; repository secrets have not been configured."
+          fi
+
+      - name: Log in to Docker Hub
+        if: steps.dockerhub.outputs.ready == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and publish the GUI bundle to Docker Hub
+        if: steps.dockerhub.outputs.ready == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./deploy/Dockerfile.desktop
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/pretendo-wii-sports-club-desktop:main
+            ${{ secrets.DOCKERHUB_USERNAME }}/pretendo-wii-sports-club-desktop:${{ github.event.workflow_run.head_sha }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.event.workflow_run.head_sha }}
