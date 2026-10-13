@@ -34,7 +34,8 @@ Do not configure these two resolver IPs as primary and secondary and expect reco
 - `docker-compose.yml` — local deployment scaffold with MongoDB.
 - `config/wii-sports-club-endpoints.json` — machine-readable endpoint metadata with source URLs and confidence notes.
 - `docs/ENDPOINT-REFERENCE.md` — sourced game-server ID, access key, account API route, historical Nintendo endpoint, and community ports.
-- `docs/SERVICE-DISCOVERY.md` — explains the still-missing account/service-discovery bridge.
+- `docs/SERVICE-DISCOVERY.md` — describes the Wii U account/service-discovery requirement.
+- `integrations/pretendo-account/provider-route.patch` — optional WSC-only bridge patch for a self-hosted or explicitly authorized Pretendo Account Server; see its [integration guide](integrations/pretendo-account/README.md).
 - `scripts/check_dns_routing.py` — queries a selected resolver for a verified hostname; can check the expected IPv4 result.
 - `.github/workflows/ci.yml` — Go builds, endpoint/DNS unit tests, Compose validation, and container builds.
 - `.github/workflows/dns-preflight.yml` — manually query a verified hostname through both public DNS resolvers.
@@ -49,7 +50,7 @@ The server components are based on the GPL-3.0-licensed Wii Sports Club server c
 4. Set `SECURE_SERVER_LOCATION` to a public host/IP that can actually be reached by test consoles.
 5. Run `docker compose up --build -d`.
 
-This starts both UDP server processes and MongoDB. The optional internal token bridge is disabled unless its secret and public auth host are configured. The stack does **not** create Pretendo Network IDs, write public DNS records, or provide the Wii U-facing account-server service-discovery integration.
+This starts both UDP server processes and MongoDB. The optional internal token bridge is disabled unless its secret and public auth host are configured. The stack does **not** create Pretendo Network IDs, write public DNS records, or alter hosted account-server behavior. The optional account-server patch is only for an account service you operate or are authorized to modify.
 
 ## Provisioning a NEX test record
 
@@ -76,9 +77,11 @@ Only set `NEX_ACCOUNTS_DATABASE=pretendo` and `NEX_ACCOUNTS_COLLECTION=wsc_nexac
 - [x] Record sourced WSC NEX ID/access key, account-server token route, response fields, known title IDs, and historical Nintendo endpoint.
 - [x] Add endpoint metadata checks to CI.
 - [x] Add Compose validation and container builds to CI.
-- [ ] Capture the Wii U startup to confirm the actual route used through each selected DNS profile.
-- [ ] Integrate an account/service-discovery path that safely returns this project's authentication host/port for game-server ID `1012F100`.
-- [ ] Verify Pretendo DNS and WiiLink DNS routing independently.
+- [x] Add an optional, WSC-only account-route integration patch for a self-hosted/authorized Pretendo Account Server.
+- [x] Resolver lookups through Pretendo and WiiLink DNS completed successfully (maintainer-reported); this does not confirm account-route behavior.
+- [ ] Deploy the route patch on an account server we control or obtain provider-side routing for game-server ID `1012F100`.
+- [ ] Capture Wii U startup traffic and confirm the account response advertises this project's authentication host/port.
+- [ ] Verify login and Wii Sports Club traffic through each DNS profile independently.
 - [ ] Add captured-packet regression tests for login, club data, rankings, matchmaking, and each sport.
 - [ ] Test on Wii U hardware and document which regions and modes are verified.
 
