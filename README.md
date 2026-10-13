@@ -2,62 +2,82 @@
 
 A community project exploring replacement online services for **Wii Sports Club on Wii U**.
 
-> **Status: work in progress.** This repository is not affiliated with Nintendo or Pretendo Network. Online play is not yet a turnkey service: endpoint discovery, account integration, and DNS routing must be configured and verified for each supported path.
+> **Status: work in progress.** This repository is not affiliated with Nintendo, Pretendo Network, or WiiLink. The services compile and container images build, but end-to-end Wii U login and online play have not yet been verified.
 
 ## Goals
 
 - Recreate the authentication and secure game-server services required by Wii Sports Club.
-- Keep gameplay services independent of the DNS provider selected by the player.
-- Document compatible connection paths for Pretendo SSSL DNS and WiiLink DNS.
-- Support regional clubs and the game's separate service requirements without assuming one region or sport is enough.
-- Make builds reproducible and deployments configurable.
+- Keep the game backend independent of the DNS provider selected by the player.
+- Test the Pretendo SSSL DNS and WiiLink DNS connection paths separately.
+- Support the game's regional clubs, ranking data, and matchmaking behavior.
+- Make builds reproducible and deployment configuration explicit.
 
 ## DNS compatibility: Pretendo and WiiLink
 
-The project aims to support either connection path. The game backend does **not** need to know which public DNS provider a player selected; it needs to advertise reachable server endpoints, and DNS must resolve those endpoints correctly.
+The **server software is resolver-neutral**: it does not need to know whether a player uses Pretendo or WiiLink DNS. Both client paths must, however, reach the correct service-discovery and server endpoints.
 
-| Connection path | Documented DNS address | Important detail |
+| Connection path | Documented DNS address | What is verified |
 | --- | --- | --- |
-| Pretendo SSSL | `88.198.140.154` | Pretendo's Wii U guide documents this as its SSSL resolver. |
-| WiiLink DNS | `167.235.229.36` | WiiLink documents this resolver and says some lookups are forwarded to Pretendo Network. |
+| Pretendo SSSL DNS | `88.198.140.154` | Listed by Pretendo's Wii U setup guide. |
+| WiiLink DNS | `167.235.229.36` | Listed by WiiLink's DNS setup guide. |
 
-These addresses are upstream DNS services, not the IP address of this project's game server. This repository cannot add records to Pretendo's or WiiLink's public DNS infrastructure. To redirect original Wii Sports Club service hostnames to a self-hosted replacement, the relevant hostname mappings must be available through the selected resolver, or the player must use an explicitly configured DNS relay/override that forwards other lookups to the chosen upstream.
+These are DNS resolver addresses, not the address of this project's game server. Public resolver setup alone does not guarantee that the Wii Sports Club service-discovery flow advertises this project. The required hostname mappings and account-server response must be verified for each path; this repository cannot edit Pretendo's or WiiLink's public DNS records.
 
-On Wii U, the secondary DNS server is a fallback, not a way to merge Pretendo and WiiLink responses. Choose one upstream profile for a given DNS relay. Do not advertise the two public DNS addresses as if both were used simultaneously.
-
-See [DNS compatibility and deployment](docs/DNS-COMPATIBILITY.md).
+Do not configure these two resolver IPs as primary and secondary and expect records to merge: the secondary DNS is a fallback. See [DNS compatibility](docs/DNS-COMPATIBILITY.md) and the more important [Wii U service-discovery requirement](docs/SERVICE-DISCOVERY.md).
 
 ## Server components
 
 - `wsc-authentication/` — NEX authentication service.
 - `wsc-secure/` — NEX secure/game service, including matchmaking and game data handlers.
+- `wsc-authentication/cmd/account-admin/` — command-line tool for provisioning a NEX password record for an existing PID.
 - `docker-compose.yml` — local deployment scaffold with MongoDB.
-- `.github/workflows/ci.yml` — compile checks for both Go modules.
+- `scripts/check_dns_routing.py` — queries a selected resolver for a verified hostname; can check the expected IPv4 result.
+- `.github/workflows/ci.yml` — Go builds, Python DNS-parser tests, Compose validation, and container builds.
 
-The server components are based on the GPL-3.0-licensed ReviveTendo Wii Sports Club server source published by [BrewtendoNetwork/Wii-Sports-Club](https://github.com/BrewtendoNetwork/Wii-Sports-Club). Attribution and the original license are retained. This repository is a separate community-maintained distribution, not an official Pretendo release.
+The server components are based on the GPL-3.0-licensed Wii Sports Club server code published by [BrewtendoNetwork/Wii-Sports-Club](https://github.com/BrewtendoNetwork/Wii-Sports-Club). The upstream license and attribution are retained. This is a separate community-maintained project, not an official Pretendo release.
 
-## Quick start
+## Quick start: build the services
 
 1. Install Docker and Docker Compose.
 2. Copy `.env.example` to `.env`.
-3. Set `KERBEROS_PASSWORD` to the same strong secret for both NEX services.
-4. Set `SECURE_SERVER_LOCATION` to a public hostname or address that resolves to this deployment for players using **either** DNS path.
-5. Start the services with `docker compose up --build`.
+3. Set `KERBEROS_PASSWORD` to a long random secret.
+4. Set `SECURE_SERVER_LOCATION` to a public host/IP that can actually be reached by test consoles.
+5. Run `docker compose up --build -d`.
 
-This boots the server processes and MongoDB. It does **not** automatically provision Pretendo Network IDs or add Wii Sports Club hostname mappings to public DNS. Account-store integration and correct endpoint routing are required before clients can log in.
+This starts both UDP server processes and MongoDB. It does **not** create Pretendo Network IDs, write public DNS records, or provide the missing Wii U account-server service-discovery integration.
+
+## Provisioning a NEX test record
+
+The account service uses `NEX_ACCOUNTS_DATABASE` and `NEX_ACCOUNTS_COLLECTION`. By default, the local deployment uses the independent `wsc.nexaccounts` collection. It does not automatically contain Pretendo accounts.
+
+For an **existing PID** in a test environment, set `WSC_NEX_PASSWORD` in your shell to the NEX credential expected for that test account and run:
+
+```sh
+export WSC_NEX_PASSWORD='your-test-nex-password'
+docker compose run --rm --entrypoint ./account-admin -e WSC_NEX_PASSWORD wsc-authentication -pid 123456
+unset WSC_NEX_PASSWORD
+```
+
+Replace `123456` with the actual existing 32-bit PID. The tool upserts that PID and password into the configured collection and does not print the password. This does **not** create a PNID, assign a PID to a Wii U, or connect this project to Pretendo's account service. Do not use production credentials for local tests.
+
+Only set `NEX_ACCOUNTS_DATABASE=pretendo` and `NEX_ACCOUNTS_COLLECTION=wsc_nexaccounts` if you administer or have explicit authorized access to a compatible account database.
 
 ## Development status
 
-- [x] Add the initial authentication and secure-server codebase with upstream attribution.
-- [x] Add a shared deployment configuration and reproducible build checks.
-- [x] Document the two DNS paths and their routing limitations.
-- [ ] Verify the actual Wii Sports Club hostnames and service discovery flow for each DNS setup.
-- [ ] Integrate account provisioning/authentication with the intended account backend.
+- [x] Add attributed authentication and secure-server code.
+- [x] Make NEX account database/collection configurable and fail clearly if the DB is unavailable.
+- [x] Add a test-only account provisioning utility for existing PIDs.
+- [x] Add resolver-specific DNS preflight tooling and unit tests.
+- [x] Add Compose validation and container builds to CI.
+- [ ] Capture the Wii U startup/service-discovery flow and confirm the exact hostnames and service response.
+- [ ] Integrate the authorized account/service-discovery path that makes clients select this secure-server URL.
+- [ ] Verify Pretendo DNS and WiiLink DNS routing independently.
 - [ ] Add captured-packet regression tests for login, club data, rankings, matchmaking, and each sport.
-- [ ] Validate end-to-end play on real Wii U hardware and document tested regions/sports.
+- [ ] Test on Wii U hardware and document which regions and modes are verified.
 
-## Upstream references
+## References
 
-- [Pretendo Wii U connection guide](https://pretendo.network/docs/install/wiiu)
+- [Pretendo Wii U setup](https://pretendo.network/docs/install/wiiu)
 - [WiiLink DNS guide](https://wiilink.ca/guide/dns/)
-- [Wii Sports Club server source used as a baseline](https://github.com/BrewtendoNetwork/Wii-Sports-Club)
+- [Pretendo Network NEX overview](https://nintendo-wiki.pretendo.network/docs/nex/)
+- [Upstream Wii Sports Club server source](https://github.com/BrewtendoNetwork/Wii-Sports-Club)
