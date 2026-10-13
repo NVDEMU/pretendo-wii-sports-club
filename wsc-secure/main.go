@@ -1104,7 +1104,7 @@ func main() {
 			// search logic so these connections don't silently fail and cause a core timeout.
 			if protoID == 0x77 && methodID == datastore.MethodSearchObject {
 				go func() {
-					fmt.Printf("Proto77 SearchObject: PID=%d params=%x\n", client.PID(), params)
+					fmt.Printf("Proto77 SearchObject: PID=%d params_len=%d\n", client.PID(), len(params))
 					result := datastore.NewDataStoreSearchResult()
 					result.TotalCount = 0
 					result.TotalCountType = 1
@@ -1116,7 +1116,7 @@ func main() {
 				return
 			}
 			go func() {
-				fmt.Printf("UnknownProto stub: PID=%d proto=0x%x method=0x%x params=%x\n", client.PID(), protoID, methodID, params)
+				fmt.Printf("UnknownProto stub: PID=%d proto=0x%x method=0x%x params_len=%d\n", client.PID(), protoID, methodID, len(params))
 				sendResponse(client, protoID, callID, methodID, []byte{})
 			}()
 		}
