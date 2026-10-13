@@ -32,7 +32,7 @@ Do not configure these two resolver IPs as primary and secondary and expect reco
 - `wsc-authentication/` — NEX authentication service.
 - `wsc-secure/` — NEX secure/game service, including matchmaking and game data handlers.
 - `wsc-authentication/cmd/account-admin/` — command-line tool for provisioning a NEX password record for an existing PID.
-- `POST /internal/wsc/nex-token` on private TCP 8080 — optional authenticated helper for a trusted account proxy; not a public Wii U endpoint.
+- `POST /internal/wsc/nex-token` on private TCP 8080 — optional local/developer helper, not required by the intended public Pretendo account route.
 - `docker-compose.yml` — local deployment scaffold with MongoDB.
 - `docs/MACOS-QUICKSTART.md` — **Mac-first local setup and browser-based Codespaces setup; no local Linux installation required.**
 - `scripts/macos-local-start.sh` — creates a local-only environment, starts Compose, and runs the internal-bridge smoke test.
@@ -79,10 +79,14 @@ For developers who do have Terminal available, see the [macOS/Codespaces quickst
 
 ## General Docker Compose setup
 
-For a host you control, copy `.env.example` to `.env`, set `KERBEROS_PASSWORD`, `WSC_NEX_PASSWORD_SECRET`, and `SECURE_SERVER_LOCATION`, then run `docker compose up --build -d`. The shared `WSC_NEX_PASSWORD_SECRET` must match the value configured on the authorized Pretendo account route. See [deployment and live verification](docs/DEPLOYMENT.md).
+For local development, Docker Compose starts MongoDB and both NEX services. For a public server, configure `KERBEROS_PASSWORD`, `SECURE_SERVER_LOCATION`, and `WSC_NEX_PASSWORD_SECRET` in `.env` before deploying the containers. The shared secret must match the authorized Pretendo account-route configuration exactly.
 
-The stack does not create or modify Pretendo Network IDs or individual account records. The WSC-only provider route uses the authenticated PNID's existing NEX/game PID and derives a WSC-specific password using `WSC_NEX_PASSWORD_SECRET`; the WSC auth server derives the same value. It registers a short-lived NEX token and advertises this project's host/port only for Wii Sports Club's `game_server_id=1012F100`. The account-service operator must deploy or approve that route or register an equivalent endpoint. This repository cannot change the hosted Pretendo endpoint, and setting Pretendo DNS alone does not make the console receive this project's endpoint. The private HTTP bridge elsewhere in the repo is optional local/developer tooling, not a requirement for this public route.
+**Existing Pretendo accounts are the intended player sign-in path.** The WSC-only provider route resolves the already-authenticated PNID's NEX PID, registers a short-lived token, and derives a WSC-specific password with HMAC-SHA256. The WSC authentication server derives the same password from `WSC_NEX_PASSWORD_SECRET`. No player PNID or individual account record is created, copied, or changed.
 
+The remaining provider-side action is to approve/deploy the route (or register an equivalent server endpoint) for `game_server_id=1012F100`. This is a service-discovery registration, not a player account modification. This repository cannot change Pretendo's hosted account service, and configuring Pretendo DNS alone does not make the console receive this project's endpoint. No custom domain or HTTPS callback tunnel is required by the HMAC design.
+
+The private TCP 8080 NEX-token bridge remains as a local/developer helper for tests; it is not part of the intended public Pretendo account route. Keep it un-published.
+ 
 ## Provisioning a NEX test record
 
 The account service uses `NEX_ACCOUNTS_DATABASE` and `NEX_ACCOUNTS_COLLECTION`. By default, the local deployment uses the independent `wsc.nexaccounts` collection. It does not automatically contain Pretendo accounts.
