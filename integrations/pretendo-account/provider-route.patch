@@ -25,6 +25,7 @@ diff --git a/src/services/nnas/routes/provider.ts b/src/services/nnas/routes/pro
  		return;
  	}
  
++	// WSC-only integration for an account server you operate or are authorized to modify.
 +	// PNID PID and NEX/game PID are distinct in Pretendo's account model.
 +	// Use the authenticated user's existing NEX account so client and game server agree on identity.
 +	const wscGameServerID = getValueFromQueryString(request.query, 'game_server_id');
