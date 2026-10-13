@@ -41,7 +41,7 @@ func main() {
 
 	nexServer.On("Data", func(packet *nex.PacketV1) {
 		request := packet.RMCRequest()
-		fmt.Printf("==WSC Auth== proto=%#v method=%#v params=%x\n",
+		fmt.Printf("==WSC Auth== proto=%#v method=%#v params_len=%d\n",
 			request.ProtocolID(), request.MethodID(), len(request.Parameters()))
 	})
 
