@@ -1,12 +1,16 @@
 # Run the WSC server in Docker Desktop without Terminal
 
-This is the graphical, school-Mac-friendly way to start a **local testing copy** of the WSC server. No Terminal or local Linux installation is required. It uses one container with MongoDB and both WSC servers inside it, so you do not need to configure a three-container network.
+This is the graphical, school-Mac-friendly way to start a **local testing copy** of the WSC server. It uses one container with MongoDB and both WSC servers inside it, so you do not need to configure a three-container network. The aim is to keep testing simple while we finish the account/service-discovery integration.
 
 **This only makes a local server process run. It does not configure Nintendo/Pretendo/WiiLink account routing or guarantee that a Wii U can log in.** The server advertises `localhost` by default, which is appropriate for startup smoke testing only. Do not expose it as a public service.
 
-## A. One-time browser setup
+## A. Get a runnable image
 
-Docker Desktop's Images search is designed around Docker Hub. To pull this project in the GUI without a command line, publish the bundle to your own free public Docker Hub repository.
+The simplest route is to use the already-published GitHub Container Registry image, if the latest successful CI run has published it: `ghcr.io/nvdemu/pretendo-wii-sports-club-desktop:main`. You do **not** need to create a cloud VM or a Docker Hub account for local testing. If the image is not available yet, open [GitHub Actions](../actions), run **WSC Build & Integration Tests (browser-run)**, and check that all jobs pass; the publish workflow only runs after a successful main-branch test. If GHCR has no `main` image, the Docker Hub publishing method below is an optional fallback—not a prerequisite for development.
+
+### Optional fallback: publish through your own Docker Hub account
+
+Docker Desktop's image search is designed around Docker Hub. Only use this fallback if the GHCR image is unavailable and you want to pull through the GUI without a command line.
 
 1. Sign up for a free [Docker Personal account](https://hub.docker.com/signup). Docker Personal includes public repositories at no cost; see [current plan details](https://www.docker.com/products/personal/).
 2. In [Docker Hub](https://hub.docker.com/), choose **My Hub → Repositories → Create repository**.
@@ -21,11 +25,9 @@ GitHub secrets are entered directly in GitHub's settings page and are not commit
 
 ## B. Pull the image through Docker Desktop
 
-1. Open Docker Desktop and make sure it says the Docker Engine is running.
-2. Select **Images** from the left navigation.
-3. Choose **Search images to run** or click the global search bar.
-4. Search for your full image name: `YOUR_DOCKERHUB_USERNAME/pretendo-wii-sports-club-desktop`, replacing the placeholder with your Docker Hub username.
-5. Select the repository, choose the `main` tag, then click **Pull**. If it does not appear in search immediately, refresh Docker Hub or open your public repository page to verify the tag is present first.
+1. Open Docker Desktop and make sure the Docker Engine is running.
+2. Select **Images** and use the pull/search controls available in your Docker Desktop version.
+3. Pull `ghcr.io/nvdemu/pretendo-wii-sports-club-desktop:main` if GHCR publishing is available. If your version only searches Docker Hub, use the optional Docker Hub fallback above or follow the command-line pull instructions in the repository README.
 
 Docker's current UI guide covers searching, pulling, and running images: [Explore the Images view](https://docs.docker.com/desktop/use-desktop/images/).
 
