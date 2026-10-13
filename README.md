@@ -36,6 +36,9 @@ Do not configure these two resolver IPs as primary and secondary and expect reco
 - `docker-compose.yml` — local deployment scaffold with MongoDB.
 - `docs/MACOS-QUICKSTART.md` — **Mac-first local setup and browser-based Codespaces setup; no local Linux installation required.**
 - `scripts/macos-local-start.sh` — creates a local-only environment, starts Compose, and runs the internal-bridge smoke test.
+- `docs/DOCKER-DESKTOP-GUI.md` — run a single-container local bundle through Docker Desktop's graphical Run dialog, with no Terminal.
+- `deploy/Dockerfile.desktop` — bundles MongoDB and both WSC servers in a single image for GUI-only local testing.
+- `deploy/start-wsc-desktop.sh` — starts and supervises the local bundle processes.
 - `config/wii-sports-club-endpoints.json` — machine-readable endpoint metadata with source URLs and confidence notes.
 - `docs/ENDPOINT-REFERENCE.md` — sourced game-server ID, access key, account API route, historical Nintendo endpoint, and community ports.
 - `docs/DEPLOYMENT.md` — public-server hosting, firewall, private account-service integration, and hardware verification sequence.
@@ -43,6 +46,7 @@ Do not configure these two resolver IPs as primary and secondary and expect reco
 - `docs/FREE-PLAN.md` — zero-cost development/test roadmap; use this before considering any cloud host.
 - `deploy/digitalocean-cloud-init.yaml` — first-boot setup to paste into a Droplet's Startup scripts field.
 - `.github/workflows/publish-containers.yml` — publishes runtime images only after main-branch CI passes.
+  Optional Docker Hub publishing is enabled by adding `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` as repository Actions secrets, so the desktop image can be pulled through Docker Desktop's GUI.
 - `docker-compose.cloud.yml` — cloud runtime config with prebuilt images and persistent data volumes.
 - `scripts/smoke_test_internal_bridge.py` — end-to-end check of the internal token bridge against MongoDB.
 - `docs/SERVICE-DISCOVERY.md` — describes the Wii U account/service-discovery requirement.
