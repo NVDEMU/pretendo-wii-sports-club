@@ -29,3 +29,18 @@ jobs:
       - name: Test and compile
         working-directory: ${{ matrix.module }}
         run: go test ./...
+
+  containers:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Validate Compose configuration
+        env:
+          KERBEROS_PASSWORD: ci-only-placeholder
+          SECURE_SERVER_LOCATION: localhost
+        run: docker compose config --quiet
+      - name: Build authentication image
+        run: docker build -t wsc-authentication ./wsc-authentication
+      - name: Build secure-server image
+        run: docker build -t wsc-secure ./wsc-secure
