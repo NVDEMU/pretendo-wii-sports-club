@@ -75,11 +75,13 @@ For developers who do have Terminal available, see the [macOS/Codespaces quickst
 
 For a host you control, copy `.env.example` to `.env`, set `KERBEROS_PASSWORD` to a long random secret, and set `SECURE_SERVER_LOCATION` to a reachable public host/IP before running `docker compose up --build -d`. See [deployment and live verification](docs/DEPLOYMENT.md) for public-host firewall, private bridge, and hardware verification details.
 
-The optional internal token bridge is disabled unless its secret and public auth host are configured. The stack does **not** create Pretendo Network IDs, write public DNS records, or alter hosted account-server behavior. The optional account-server patch is only for an account service you operate or are authorized to modify.
+The optional internal token bridge is disabled unless its secret and public auth host are configured. The stack does **not** create Pretendo Network IDs, write public DNS records, or alter hosted account-server behavior. **Existing Pretendo accounts are intended to remain unchanged:** the WSC-only provider-route integration takes the already-authenticated PNID and its associated NEX/game PID, then asks this revival's private bridge for a WSC-specific NEX password and session token. The WSC password is stored in this revival's own database; it is not the user's Pretendo password. The route integration does not reset a PNID, change its profile, or copy Pretendo's account database. It changes service discovery only for Wii Sports Club's `game_server_id=1012F100`; the account-service operator must deploy or approve that route. This repository cannot change the hosted Pretendo endpoint, and setting Pretendo DNS alone does not make the console receive this project's endpoint.
 
 ## Provisioning a NEX test record
 
 The account service uses `NEX_ACCOUNTS_DATABASE` and `NEX_ACCOUNTS_COLLECTION`. By default, the local deployment uses the independent `wsc.nexaccounts` collection. It does not automatically contain Pretendo accounts.
+
+**This manual command is only for an isolated/local NEX test.** It is not the intended sign-in flow for players using Pretendo IDs. In the intended integration, the account service authenticates the existing PNID and resolves its NEX/game PID; the private bridge provisions the matching WSC-only NEX password automatically. Do not ask players for their Pretendo password, and do not point this revival at Pretendo's private database.
 
 For an **existing PID** in a test environment, set `WSC_NEX_PASSWORD` in your shell to the NEX credential expected for that test account and run:
 
