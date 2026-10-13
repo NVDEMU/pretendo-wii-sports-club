@@ -20,6 +20,9 @@ services:
     environment:
       MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017/}
       KERBEROS_PASSWORD: ${KERBEROS_PASSWORD:?Set KERBEROS_PASSWORD in .env}
+      WSC_DATASTORE_PATH: /data/datastore.json
+    volumes:
+      - wsc_secure_data:/data
     ports:
       - "60015:60015/udp"
 
@@ -45,3 +48,4 @@ services:
 
 volumes:
   wsc_mongo_data:
+  wsc_secure_data:
