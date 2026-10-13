@@ -6,6 +6,12 @@ The Wii U obtains its NEX authentication endpoint from the account server route:
 
 A successful DNS lookup only proves that the hostname resolves; it does not prove that this route returns this project's endpoint.
 
+## Route behavior and title IDs
+
+The route patch checks the game-server ID `1012F100` separately from the Wii U application's title ID. It accepts the candidate WSC title IDs recorded in [the endpoint metadata](../../config/wii-sports-club-endpoints.json), uses the already-authenticated account's `pnid.pid` (never a PID submitted by the caller), and leaves the generic route for other game-server IDs intact. The allowlist contains candidate regional/version IDs because public title maps differ; capture the actual `x-nintendo-title-id` from your own test request, redact credentials, and verify that ID before broadening the allowlist.
+
+The [Account-server integration patch check](../../.github/workflows/account-integration-patch.yml) applies this patch to a pinned upstream baseline and runs the account server's TypeScript compiler. That validates patch application and typing, but it does not deploy the route or prove a live Wii U request.
+
 Pretendo Account Server has a route in `src/services/nnas/routes/provider.ts`. In that implementation, the account server selects a registered server based on `game_server_id`, then returns its host/port plus NEX account credentials. For a self-hosted or explicitly authorized account server, the next integration task is to route only WSC game server ID `1012F100` to this project's private token bridge, leaving all other games on the existing route.
 
 ## Required configuration for an authorized deployment
