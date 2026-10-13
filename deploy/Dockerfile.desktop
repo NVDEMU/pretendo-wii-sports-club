@@ -1,0 +1,38 @@
+# Local-testing bundle for users who can use Docker Desktop's GUI but not a shell.
+# This image keeps MongoDB and both WSC NEX servers inside one container so that
+# users do not need to create a Compose project or wire up container networking.
+FROM golang:1.27.2-bookworm AS auth-build
+WORKDIR /src
+COPY wsc-authentication/go.mod wsc-authentication/go.sum ./
+RUN go mod download
+COPY wsc-authentication/ ./
+RUN mkdir -p /out && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/wsc-authentication .
+
+FROM golang:1.27.2-bookworm AS secure-build
+WORKDIR /src
+COPY wsc-secure/go.mod wsc-secure/go.sum ./
+RUN go mod download
+COPY wsc-secure/ ./
+RUN mkdir -p /out && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/wsc-secure .
+
+FROM mongo:7
+USER root
+WORKDIR /app
+COPY --from=auth-build /out/wsc-authentication /app/wsc-authentication
+COPY --from=secure-build /out/wsc-secure /app/wsc-secure
+COPY deploy/start-wsc-desktop.sh /usr/local/bin/start-wsc-desktop
+RUN chmod 0755 /usr/local/bin/start-wsc-desktop \
+    && mkdir -p /data/db \
+    && chown -R mongodb:mongodb /data
+VOLUME ["/data"]
+ENV MONGO_URI=mongodb://127.0.0.1:27017/ \
+    NEX_ACCOUNTS_DATABASE=wsc \
+    NEX_ACCOUNTS_COLLECTION=nexaccounts \
+    SECURE_SERVER_LOCATION=localhost \
+    SECURE_SERVER_PORT=60015 \
+    WSC_DATASTORE_PATH=/data/datastore.json
+USER mongodb
+EXPOSE 60014/udp 60015/udp
+HEALTHCHECK --interval=10s --timeout=4s --start-period=30s --retries=6 \
+    CMD bash -ec 'mongosh --quiet "mongodb://127.0.0.1:27017/admin" --eval "quit(db.adminCommand({ping:1}).ok ? 0 : 1)" >/dev/null && test -s /tmp/wsc-authentication.pid && kill -0 "$(cat /tmp/wsc-authentication.pid)" && test -s /tmp/wsc-secure.pid && kill -0 "$(cat /tmp/wsc-secure.pid)"'
+ENTRYPOINT ["/usr/local/bin/start-wsc-desktop"]
