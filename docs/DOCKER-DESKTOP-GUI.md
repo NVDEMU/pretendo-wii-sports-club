@@ -23,13 +23,19 @@ Docker Desktop's image search is designed around Docker Hub. Only use this fallb
 
 GitHub secrets are entered directly in GitHub's settings page and are not committed to the repository. Never paste the token into source code, an issue, a chat, or a public log. Official instructions: [GitHub Actions repository secrets](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets).
 
-## B. Pull the image through Docker Desktop
+## B. Get the image into Docker Desktop
 
-1. Open Docker Desktop and make sure the Docker Engine is running.
-2. Select **Images** and use the pull/search controls available in your Docker Desktop version.
-3. Pull `ghcr.io/nvdemu/pretendo-wii-sports-club-desktop:main` if GHCR publishing is available. If your version only searches Docker Hub, use the optional Docker Hub fallback above or follow the command-line pull instructions in the repository README.
+**Important:** Docker Desktop's Images search/Pull controls are for Docker Hub; they do not provide a generic pull button for GitHub Container Registry (GHCR). The GHCR image is published, but to fetch it directly you need to run one command in macOS Terminal:
 
-Docker's current UI guide covers searching, pulling, and running images: [Explore the Images view](https://docs.docker.com/desktop/use-desktop/images/).
+```sh
+docker pull ghcr.io/nvdemu/pretendo-wii-sports-club-desktop:main
+```
+
+This downloads the image into Docker's local image store. After it finishes, return to Docker Desktop → **Images**; the image should appear there, and you can use the GUI for the rest of the steps.
+
+If the command reports `denied` or `unauthorized`, the package is probably private. To allow anonymous pulls, open the [desktop package settings](https://github.com/users/NVDEMU/packages/container/pretendo-wii-sports-club-desktop), choose **Package settings → Change visibility → Public**, and confirm. **Public means anyone can download the image, and GitHub does not allow a public package to be changed back to private.** If you prefer not to make it public or use Terminal, use the optional Docker Hub publishing route above instead; that needs Docker Hub credentials stored as GitHub Actions secrets.
+
+Docker's GUI can run and manage images after they're in the local image store: [Explore the Images view](https://docs.docker.com/desktop/use-desktop/images/).
 
 ## C. Run the container in the GUI
 
