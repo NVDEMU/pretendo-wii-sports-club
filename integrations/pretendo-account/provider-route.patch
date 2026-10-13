@@ -59,7 +59,7 @@ diff --git a/src/services/nnas/routes/provider.ts b/src/services/nnas/routes/pro
 -	const gameServerID = getValueFromQueryString(request.query, 'game_server_id');
 -
  	if (!gameServerID) {
-@@ -210,3 +253,1 @@
+@@ -210,3 +251,1 @@
 -	const titleID = getValueFromHeaders(request.headers, 'x-nintendo-title-id');
 -
  	if (!titleID) {
