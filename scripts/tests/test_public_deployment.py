@@ -26,12 +26,14 @@ class PublicDeploymentTests(unittest.TestCase):
         self.assertIn("WSC_NEX_PASSWORD_SECRET", auth["environment"])
         self.assertIn("WSC_NEX_PASSWORD_SECRET", self.bootstrap)
         self.assertIn("crypto.createHmac('sha256', wscPasswordSecret)", self.route)
-        self.assertIn("deriveWSCNEXPassword", self.guide)
+        # Keep this a user-facing documentation check, not a dependency on
+        # the internal Go function's symbol name.
+        self.assertIn("derived WSC password", self.guide)
 
     def test_existing_pretendo_accounts_are_the_intended_path(self):
         self.assertIn("existing Pretendo PNIDs", self.guide)
-        self.assertIn("WSC-only route", self.guide)
-        self.assertIn("does not change individual account records", self.guide)
+        self.assertIn("WSC-only account-service route", self.guide)
+        self.assertIn("does not create a replacement account system", self.guide)
         self.assertNotIn("WSC_BRIDGE_DOMAIN", self.bootstrap)
         self.assertNotIn("DuckDNS", self.guide)
 
