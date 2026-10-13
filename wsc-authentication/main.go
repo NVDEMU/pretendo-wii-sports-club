@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	nex "github.com/PretendoNetwork/nex-go"
 	"github.com/PretendoNetwork/nex-protocols-common-go/authentication"
@@ -11,6 +12,20 @@ import (
 var nexServer *nex.Server
 
 func main() {
+	secureLocation := strings.TrimSpace(os.Getenv("SECURE_SERVER_LOCATION"))
+	if secureLocation == "" {
+		fmt.Fprintln(os.Stderr, "SECURE_SERVER_LOCATION is required: set the public host/IP advertised to Wii U clients")
+		os.Exit(2)
+	}
+	if strings.TrimSpace(os.Getenv("KERBEROS_PASSWORD")) == "" {
+		fmt.Fprintln(os.Stderr, "KERBEROS_PASSWORD is required")
+		os.Exit(2)
+	}
+	if err := connectMongo(); err != nil {
+		fmt.Fprintf(os.Stderr, "NEX account database startup failed: %v\n", err)
+		os.Exit(1)
+	}
+
 	nexServer = nex.NewServer()
 	nexServer.SetPRUDPVersion(1)
 	nexServer.SetPRUDPProtocolMinorVersion(3)
@@ -30,10 +45,14 @@ func main() {
 
 	authenticationProtocol := authentication.NewCommonAuthenticationProtocol(nexServer)
 
+	securePort := strings.TrimSpace(os.Getenv("SECURE_SERVER_PORT"))
+	if securePort == "" {
+		securePort = "60015"
+	}
 	secureStationURL := nex.NewStationURL("")
 	secureStationURL.SetScheme("prudps")
-	secureStationURL.SetAddress(os.Getenv("SECURE_SERVER_LOCATION"))
-	secureStationURL.SetPort(os.Getenv("SECURE_SERVER_PORT"))
+	secureStationURL.SetAddress(secureLocation)
+	secureStationURL.SetPort(securePort)
 	secureStationURL.SetCID("1")
 	secureStationURL.SetPID("2")
 	secureStationURL.SetSID("1")
@@ -41,7 +60,7 @@ func main() {
 	secureStationURL.SetType("2")
 
 	authenticationProtocol.SetSecureStationURL(secureStationURL)
-	authenticationProtocol.SetBuildName("Pretendo WSC")
+	authenticationProtocol.SetBuildName("Community WSC")
 	authenticationProtocol.SetPasswordFromPIDFunction(passwordFromPID)
 
 	nexServer.Listen(":60014")
