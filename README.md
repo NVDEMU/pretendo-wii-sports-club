@@ -61,6 +61,12 @@ Do not configure these two resolver IPs as primary and secondary and expect reco
 
 The server components are based on the GPL-3.0-licensed Wii Sports Club server code published by [BrewtendoNetwork/Wii-Sports-Club](https://github.com/BrewtendoNetwork/Wii-Sports-Club). The upstream license and attribution are retained. This is a separate community-maintained project, not an official Pretendo release.
 
+## Easiest local test (Docker Desktop)
+
+If Docker Desktop is already installed, start with the [Docker Desktop GUI guide](docs/DOCKER-DESKTOP-GUI.md). It walks through running the bundled authentication server, game server, and database without installing Go or configuring multiple containers. For now, use this as a **local process/startup test**; it is not yet a one-click online connection for a Wii U.
+
+**Player experience goal:** connect the same way as any other Pretendo-supported game: use the player's existing Pretendo account, no separate revival registration, no second password prompt, and no manual per-player account setup. The revival should handle WSC-specific credentials behind the scenes. The remaining blocker is service discovery: the Wii U must be told to connect to this revival's server for WSC. A local Docker test does not change Pretendo's hosted account route or public DNS, and it does not prove real console login yet.
+
 ## Browser-only quick start (no Terminal required)
 
 You can build and test repository changes entirely from GitHub's website. Open the [Browser-only quick start](docs/BROWSER-ONLY-QUICKSTART.md), then visit [GitHub Actions](https://github.com/NVDEMU/pretendo-wii-sports-club/actions). Select **WSC Build & Integration Tests (browser-run)**, click **Run workflow**, keep branch `main), and click **Run workflow** again. The tests also run automatically after every commit.
