@@ -42,7 +42,7 @@ func main() {
 	nexServer.On("Data", func(packet *nex.PacketV1) {
 		request := packet.RMCRequest()
 		fmt.Printf("==WSC Auth== proto=%#v method=%#v params=%x\n",
-			request.ProtocolID(), request.MethodID(), request.Parameters())
+			request.ProtocolID(), request.MethodID(), len(request.Parameters()))
 	})
 
 	authenticationProtocol := authentication.NewCommonAuthenticationProtocol(nexServer)
