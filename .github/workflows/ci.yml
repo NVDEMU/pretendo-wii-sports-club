@@ -51,11 +51,16 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v4
-      - name: Validate Compose configuration
+      - name: Validate local Compose configuration
         env:
           KERBEROS_PASSWORD: ci-only-placeholder
           SECURE_SERVER_LOCATION: localhost
         run: docker compose config --quiet
+      - name: Validate cloud runtime Compose configuration
+        env:
+          KERBEROS_PASSWORD: ci-only-placeholder
+          SECURE_SERVER_LOCATION: localhost
+        run: docker compose -f docker-compose.cloud.yml config --quiet
       - name: Build authentication image
         run: docker build -t wsc-authentication ./wsc-authentication
       - name: Build secure-server image
