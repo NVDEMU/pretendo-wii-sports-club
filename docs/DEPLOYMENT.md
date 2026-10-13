@@ -35,6 +35,10 @@ docker compose logs --tail=100 wsc-authentication wsc-secure
 
 Check that both NEX processes stay running and MongoDB reports healthy. Do not commit `.env`, paste credentials into issues, or expose TCP 8080.
 
+## 3. Connect the hosted Pretendo account service
+
+For public Pretendo PNIDs, the account service and the WSC game server are not on one Docker network. Do not point a remote Pretendo account process at the private container hostname. Use the HTTPS-only bridge in [the public-host overlay](../docker-compose.public.yml) and follow [the no-cost WSC host guide](OCI-WSC-HOSTING.md). The bridge URL must be `https://YOUR-DOMAIN/internal/wsc/nex-token`; the generated bearer secret is shared with the authorized Pretendo operator privately. The account service must approve/deploy the WSC-only route before public Pretendo users will be directed to this game server.
+
 ## 3. Connect an authorized account service
 
 Review [the self-hosted account-server integration](../integrations/pretendo-account/README.md). Apply the route patch only to an account server you operate or are explicitly authorized to modify. The account-server process must be able to reach:

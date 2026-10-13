@@ -23,7 +23,7 @@ You can also edit files by opening them in GitHub, choosing the pencil icon when
 
 A GitHub Actions runner is temporary and does not provide a permanent public UDP endpoint for Wii U clients. Passing tests does not mean the console can log in or play a match.
 
-Public Wii U verification still needs a server that can run continuously and accept inbound UDP 60014 and 60015, plus a compatible account/service-discovery route operated by us or configured by a provider with authorization. If you cannot pay for hosting, leave deployment on hold until a genuinely free host is available or a community member voluntarily offers hosting. Never assume a provider's free trial is permanent, and never create a resource unless the control panel clearly shows it is free.
+Public Wii U verification still needs a server that can run continuously and accept inbound UDP 60014 and 60015, plus a compatible public Pretendo account/service-discovery route. See [the no-cost eligible VM guide](OCI-WSC-HOSTING.md). Oracle Cloud may offer Always Free-eligible instances, but capacity/account verification varies; proceed only if the exact selected shape and storage explicitly show no charge. Never assume a provider's free trial is permanent.
 
 ## Optional cloud guide
 

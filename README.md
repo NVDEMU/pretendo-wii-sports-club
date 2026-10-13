@@ -38,6 +38,9 @@ Do not configure these two resolver IPs as primary and secondary and expect reco
 - `scripts/macos-local-start.sh` — creates a local-only environment, starts Compose, and runs the internal-bridge smoke test.
 - `docs/DOCKER-DESKTOP-GUI.md` — run a single-container local bundle through Docker Desktop's graphical Run dialog, with no Terminal.
 - `docs/ONLINE-READINESS.md` — remaining account/service-discovery requirements and post-publish hosting steps.
+- `docs/OCI-WSC-HOSTING.md` — no-cost eligible VM guide that keeps existing Pretendo PNIDs and provides a TLS-protected game-server bridge.
+- `docker-compose.public.yml` and `deploy/Caddyfile` — HTTPS-only public bridge route; TCP 8080 and MongoDB stay private.
+- `deploy/oci-wsc-bootstrap.sh` — browser/cloud-init bootstrap for the WSC host.
 - `deploy/Dockerfile.desktop` — bundles MongoDB and both WSC servers in a single image for GUI-only local testing.
 - `deploy/start-wsc-desktop.sh` — starts and supervises the local bundle processes.
 - `config/wii-sports-club-endpoints.json` — machine-readable endpoint metadata with source URLs and confidence notes.
