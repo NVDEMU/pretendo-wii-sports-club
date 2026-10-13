@@ -11,7 +11,7 @@ This setup runs **only the Wii Sports Club game servers**. It does not create a 
 
 ## 1. Create an eligible free VM
 
-Use a provider console to create Ubuntu 22.04 or 24.04 on an x86_64 Always Free-eligible VM. Oracle Cloud lists some VM.Standard.E2.1.Micro configurations as Always Free eligible, but availability varies and account verification may be required. **Choose only a shape and boot volume that explicitly show no charge**; do not select a paid shape or leave a trial running after its terms expire. An ephemeral GitHub Actions runner cannot host permanent UDP game traffic.
+Use a provider console to create Ubuntu 22.04 or 24.04 on an Always Free-eligible VM. Oracle Cloud currently lists both AMD VM.Standard.E2.1.Micro (1 GB RAM) and Arm VM.Standard.A1.Flex allocations as Always Free resources; A1 with its available free OCPU/RAM allocation is preferable for building the Go containers. Capacity varies and account verification may be required. **Choose only a shape and boot volume that explicitly show no charge**; do not select a paid shape or leave a trial running after its terms expire. An ephemeral GitHub Actions runner cannot host permanent UDP game traffic.
 
 ## 2. Create a free HTTPS DNS name
 
@@ -46,7 +46,7 @@ curl -fsSL https://raw.githubusercontent.com/NVDEMU/pretendo-wii-sports-club/mai
 bash /root/oci-wsc-bootstrap.sh
 ```
 
-The script installs Docker, updates your DuckDNS A record to the instance IP, creates random passwords and a bridge bearer token, writes a root-readable `.env`, and starts the WSC containers. The DuckDNS token is used only to update the DNS record and is not written into the WSC `.env` or public logs. The account bridge's public HTTPS path is:
+The script installs Docker, updates your DuckDNS A record to the instance IP, creates random passwords and a bridge bearer token, writes a root-readable `.env`, builds the two Go server images sequentially to reduce memory pressure, and starts the WSC containers. The DuckDNS token is used only to update the DNS record and is not written into the WSC `.env` or public logs. The account bridge's public HTTPS path is:
 
 ```text
 https://YOUR-SUBDOMAIN.duckdns.org/internal/wsc/nex-token

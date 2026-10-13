@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Installs the WSC game servers and a TLS-protected token bridge on a VM you control.
-# Designed for Ubuntu 22.04/24.04 on an Oracle Cloud Always Free-eligible x86 VM.
+# Designed for Ubuntu 22.04/24.04 on an Oracle Cloud Always Free-eligible VM (AMD or Arm).
 set -Eeuo pipefail
 export TERM=${TERM:-xterm}
 
@@ -70,7 +70,9 @@ ufw allow 60015/udp
 ufw delete allow 8080/tcp >/dev/null 2>&1 || true
 ufw --force enable
 
-docker compose -f docker-compose.yml -f docker-compose.public.yml up --build -d
+# Build sequentially so the smaller Always Free VM shapes do not run two Go builds at once.
+docker compose --parallel 1 -f docker-compose.yml -f docker-compose.public.yml build
+docker compose -f docker-compose.yml -f docker-compose.public.yml up -d
 docker compose -f docker-compose.yml -f docker-compose.public.yml ps
 
 echo
