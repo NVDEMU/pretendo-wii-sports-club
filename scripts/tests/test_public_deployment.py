@@ -35,7 +35,7 @@ class PublicDeploymentTests(unittest.TestCase):
         self.assertIn("WSC-only account-service route", self.guide)
         self.assertIn("does not create a replacement account system", self.guide)
         self.assertNotIn("WSC_BRIDGE_DOMAIN", self.bootstrap)
-        self.assertNotIn("DuckDNS", self.guide)
+        self.assertIn("does not require a domain", self.guide)
 
 
 if __name__ == "__main__":
