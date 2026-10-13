@@ -27,9 +27,14 @@ jobs:
       matrix:
         include:
           - context: ./wsc-authentication
+            file: ./wsc-authentication/Dockerfile
             image: ghcr.io/nvdemu/pretendo-wii-sports-club-authentication
           - context: ./wsc-secure
+            file: ./wsc-secure/Dockerfile
             image: ghcr.io/nvdemu/pretendo-wii-sports-club-secure
+          - context: .
+            file: ./deploy/Dockerfile.desktop
+            image: ghcr.io/nvdemu/pretendo-wii-sports-club-desktop
     steps:
       - name: Check out the exact commit that passed CI
         uses: actions/checkout@v4
@@ -70,6 +75,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
           push: true
           tags: |
             ${{ matrix.image }}:main
