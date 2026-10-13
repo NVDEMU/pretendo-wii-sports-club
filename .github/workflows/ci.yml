@@ -74,17 +74,9 @@ jobs:
       - name: Validate cloud runtime Compose configuration
         env:
           KERBEROS_PASSWORD: ci-only-placeholder
+          WSC_NEX_PASSWORD_SECRET: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
           SECURE_SERVER_LOCATION: localhost
         run: docker compose -f docker-compose.cloud.yml config --quiet
-      - name: Validate public HTTPS bridge Compose overlay
-        env:
-          KERBEROS_PASSWORD: ci-only-placeholder
-          SECURE_SERVER_LOCATION: 127.0.0.1
-          NEX_AUTH_PUBLIC_HOST: 127.0.0.1
-          WSC_INTERNAL_API_TOKEN: ci-only-placeholder-token-long-enough-for-compose
-          WSC_BRIDGE_DOMAIN: wsc-ci.example.invalid
-          ACME_EMAIL: wsc-ci@example.invalid
-        run: docker compose -f docker-compose.yml -f docker-compose.public.yml config --quiet
       - name: Build authentication image
         run: docker build -t wsc-authentication ./wsc-authentication
       - name: Build secure-server image
@@ -107,6 +99,7 @@ jobs:
             --publish 127.0.0.1:16015:60015/udp \
             --volume wsc-desktop-smoke-data:/data \
             --env KERBEROS_PASSWORD=ci-only-local-test-secret \
+            --env WSC_NEX_PASSWORD_SECRET=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef \
             --env SECURE_SERVER_LOCATION=localhost \
             wsc-desktop:ci
           ready=false

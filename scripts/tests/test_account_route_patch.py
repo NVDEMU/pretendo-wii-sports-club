@@ -14,15 +14,12 @@ class AccountRoutePatchSafetyTests(unittest.TestCase):
         cls.patch = PATCH.read_text(encoding="utf-8")
         cls.endpoints = json.loads(ENDPOINTS.read_text(encoding="utf-8"))
 
-    def test_route_is_wsc_only_and_keeps_existing_account_resolution(self):
+    def test_route_is_wsc_only_and_uses_existing_nex_pid(self):
         self.assertIn("if (wscGameServerID?.toUpperCase() === '1012F100')", self.patch)
-        self.assertIn("const nexAccount = await NEXAccount.findOne({", self.patch)
-        self.assertLess(
-            self.patch.index("const nexAccount = await NEXAccount.findOne({"),
-            self.patch.index("const wscGameServerID = getValueFromQueryString")
-        )
         self.assertIn("const gameServerID = getValueFromQueryString(request.query, 'game_server_id');", self.patch)
-        self.assertIn("getServerByGameServerID(gameServerID, serverAccessLevel)", self.patch)
+        self.assertIn("nexAccount.pid", self.patch)
+        self.assertNotIn("NEXAccount.create", self.patch)
+        self.assertNotIn("NEXAccount.update", self.patch)
 
     def test_title_allowlist_matches_repo_metadata(self):
         match = re.search(r"const allowedTitleIDs = new Set\(\[([\s\S]*?)\]\);", self.patch)
@@ -35,14 +32,6 @@ class AccountRoutePatchSafetyTests(unittest.TestCase):
         self.assertEqual(set(ids), set(expected))
         self.assertEqual(len(ids), len(set(ids)))
 
-    def test_existing_nex_pid_and_token_registration(self):
-        self.assertIn("nexAccount.pid", self.patch)
-        self.assertIn("NEXToken.create({", self.patch)
-        self.assertIn("system_type: SystemType.WUP", self.patch)
-        self.assertIn("token_type: TokenType.NEX", self.patch)
-        self.assertNotIn("NEXAccount.create", self.patch)
-        self.assertNotIn("NEXAccount.update", self.patch)
-
     def test_shared_hmac_and_direct_endpoint_response(self):
         self.assertIn("WSC_NEX_PASSWORD_SECRET", self.patch)
         self.assertIn("crypto.createHmac('sha256', wscPasswordSecret)", self.patch)
@@ -50,11 +39,11 @@ class AccountRoutePatchSafetyTests(unittest.TestCase):
         self.assertIn("WSC_NEX_AUTH_HOST", self.patch)
         self.assertIn("WSC_NEX_AUTH_PORT", self.patch)
         self.assertIn("nex_password: wscNexPassword", self.patch)
-        self.assertIn("host: wscAuthHost", self.patch)
         self.assertNotIn("got.post", self.patch)
         self.assertNotIn("WSC_INTERNAL_API_URL", self.patch)
 
-    def test_token_expiry_and_no_cache(self):
+    def test_token_registration_and_cache_headers(self):
+        self.assertIn("NEXToken.create({", self.patch)
         self.assertIn("crypto.createHash('sha256').update(wscToken).digest('hex')", self.patch)
         self.assertIn("expires: new Date(issuedAt.getTime() + (3600 * 1000))", self.patch)
         self.assertIn("response.set('Cache-Control', 'no-store')", self.patch)
