@@ -1,75 +1,61 @@
-# Public WSC host with Pretendo accounts
+# Hosting WSC with existing Pretendo accounts
 
-This setup runs **only the Wii Sports Club game servers**. It does not create a replacement PNID/account network. Players keep using their existing Pretendo Network accounts.
+**Players keep their existing Pretendo PNIDs.** This setup does not create a replacement account system or change individual account records.
 
-## What it enables
+## What is needed
 
-- Public WSC NEX authentication on UDP 60014 and secure/game service on UDP 60015.
-- Persistent MongoDB and datastore storage.
-- An HTTPS token-bridge endpoint for the account-server integration. The underlying TCP 8080 helper and MongoDB port remain private.
-- A generated WSC-specific NEX password per authenticated Pretendo NEX PID. The account route returns the WSC password, registers the matching NEX token with the Pretendo account service, and keeps the same PID identity. This avoids needing to copy Pretendo's account database.
+- A machine that stays running and has a host/IP reachable from the Wii U.
+- Inbound UDP ports 60014 (NEX authentication) and 60015 (secure/game service).
+- A WSC-only account-service route or supported server-registration entry for game-server ID `1012F100`.
+- One shared server-side `WSC_NEX_PASSWORD_SECRET`, configured on both the WSC auth container and the account route. This is not a player's password.
 
-## 1. Create an eligible free VM
+No custom DNS name, DuckDNS token, HTTPS token bridge, or second account system is needed by this design.
 
-Use a provider console to create Ubuntu 22.04 or 24.04 on an Always Free-eligible VM. Oracle Cloud currently lists both AMD VM.Standard.E2.1.Micro (1 GB RAM) and Arm VM.Standard.A1.Flex allocations as Always Free resources; A1 with its available free OCPU/RAM allocation is preferable for building the Go containers. Capacity varies and account verification may be required. **Choose only a shape and boot volume that explicitly show no charge**; do not select a paid shape or leave a trial running after its terms expire. An ephemeral GitHub Actions runner cannot host permanent UDP game traffic.
+## Host choices
 
-## 2. Create a free HTTPS DNS name
+### School Mac
 
-Register a free DuckDNS subdomain at https://www.duckdns.org/ and keep its update token private. The bootstrap updates that subdomain to the VM's public IPv4 and waits for DNS resolution before starting Caddy, because Caddy needs to obtain an HTTPS certificate. A domain is used only to secure the account-to-game-server bridge; the Wii U's NEX endpoint still advertises the VM's public IPv4.
+Docker Desktop can run the stack for startup tests. If the Wii U is on the same permitted LAN, map UDP 60014/60015 and set `SECURE_SERVER_LOCATION` to the Mac's LAN IPv4 address. Do not use `localhost` for the console. School policy/network may block inbound traffic; do not bypass those restrictions. The Mac will not be a dependable public host if it sleeps, leaves the network, or loses connectivity.
 
-## 3. Open cloud-network ingress
+### Public host
 
-In the provider's VCN/security-list/firewall panel, add these rules:
+A public IP address is sufficient for the NEX endpoint; a domain is not required for these UDP services. Since there is no hosting budget, use a genuinely free eligible host only if it already shows no charge, or ask a community member to host. Do not buy a VPS or enter billing information just for this project.
 
-| Source | Destination protocol/port | Reason |
-| --- | --- | --- |
-| Your public IP/32 | TCP 22 | SSH/diagnostics only if needed |
-| 0.0.0.0/0 | TCP 80, TCP 443 | HTTPS certificate and token bridge |
-| 0.0.0.0/0 | UDP 60014 | WSC NEX authentication |
-| 0.0.0.0/0 | UDP 60015 | WSC secure/game service |
+Open UDP 60014 and UDP 60015 in both the provider firewall and the machine firewall. Do not expose MongoDB 27017 or optional internal TCP 8080.
 
-Do **not** expose TCP 8080, MongoDB 27017, or any database/admin interface. The bridge is HTTPS with a long bearer secret, and only its single path is reverse-proxied.
+## Configure the WSC host
 
-## 4. Run the bootstrap through the provider's browser console
+In the WSC host's `.env`:
 
-Inspect [the bootstrap script](../deploy/oci-wsc-bootstrap.sh), [the Compose overlay](../docker-compose.public.yml), and [the Caddy route](../deploy/Caddyfile) before running them. In the VM's cloud-init/initialization-script field, paste the following after replacing the two uppercase placeholders:
-
-```bash
-#!/bin/bash
-set -eu
-export WSC_BRIDGE_DOMAIN="YOUR-SUBDOMAIN.duckdns.org"
-export ACME_EMAIL="YOUR-EMAIL-ADDRESS"
-export WSC_DUCKDNS_TOKEN="YOUR-DUCKDNS-UPDATE-TOKEN"
-apt-get update
-apt-get install -y curl
-curl -fsSL https://raw.githubusercontent.com/NVDEMU/pretendo-wii-sports-club/main/deploy/oci-wsc-bootstrap.sh -o /root/oci-wsc-bootstrap.sh
-bash /root/oci-wsc-bootstrap.sh
+```dotenv
+KERBEROS_PASSWORD=<long random server/Kerberos secret>
+SECURE_SERVER_LOCATION=<public IP/hostname the Wii U can reach>
+SECURE_SERVER_PORT=60015
+WSC_NEX_PASSWORD_SECRET=<shared secret configured for the WSC account route>
 ```
 
-The script installs Docker, updates your DuckDNS A record to the instance IP, creates random passwords and a bridge bearer token, writes a root-readable `.env`, builds the two Go server images sequentially to reduce memory pressure, and starts the WSC containers. The DuckDNS token is used only to update the DNS record and is not written into the WSC `.env` or public logs. The account bridge's public HTTPS path is:
+The same random `WSC_NEX_PASSWORD_SECRET` must be used in the account route and WSC auth container. Use at least 32 bytes; a 64-character hex value is recommended. Do not commit it to Git or post it in an issue.
 
-```text
-https://YOUR-SUBDOMAIN.duckdns.org/internal/wsc/nex-token
+On the authorized account service, set:
+
+```dotenv
+WSC_NEX_AUTH_HOST=<public IP/hostname of the WSC authentication server>
+WSC_NEX_AUTH_PORT=60014
+WSC_NEX_PASSWORD_SECRET=<the exact same shared secret>
 ```
 
-After first boot, confirm that Caddy obtained a valid TLS certificate and that `docker compose -f docker-compose.yml -f docker-compose.public.yml ps` shows the services running. The VM's public IP and port are the WSC endpoints; the HTTPS hostname is for the bridge.
+These account-service values belong on the service or authorized deployment, not in public source. If the account route is not deployed/registered, existing Pretendo PNIDs won't be directed to the custom server.
 
-## 5. Connect the public Pretendo account route
+## Bootstrap
 
-The repository contains a WSC-only patch for Pretendo's account route. It recognizes game-server ID `1012F100`, validates a WSC title ID, uses the already-authenticated Pretendo PNID and its existing NEX/game PID, issues and registers a NEX token, and asks the WSC bridge for the response XML.
+The optional [bootstrap script](../deploy/oci-wsc-bootstrap.sh) installs Docker and starts the WSC containers. It requires the already-configured shared secret and a host with a reachable IP. It does not require a domain or HTTPS bridge.
 
-An operator with access to Pretendo's hosted account service must deploy/approve this WSC-only route or register an equivalent route in its service-discovery configuration. Provide them the following **privately**:
+## Verification
 
-- The route patch: [provider-route.patch](../integrations/pretendo-account/provider-route.patch)
-- The bridge URL above
-- The generated `WSC_INTERNAL_API_TOKEN` value from `/opt/pretendo-wii-sports-club/.env`, shared only through a private channel
+1. Confirm both containers remain healthy.
+2. Confirm UDP 60014 and UDP 60015 are open and externally reachable.
+3. Confirm the account response for `game_server_id=1012F100` returns the existing NEX PID, WSC auth host/port, derived WSC password, and registered token.
+4. Confirm the auth response advertises the secure/game host on UDP 60015.
+5. Test a real Wii U login with an existing Pretendo PNID, then test club data, rankings, matchmaking, and a match.
 
-They would configure the account-service environment with `WSC_INTERNAL_API_URL` set to that HTTPS URL and `WSC_INTERNAL_API_TOKEN` set to the same secret. Do not publish the token in GitHub issues, screenshots, console logs, or chat. The code in this repository cannot write to Pretendo's hosted production server, and public DNS alone does not register the game server.
-
-## 6. Hardware validation
-
-Using a Wii U with a Pretendo PNID, first confirm its account-service response advertises the VM IP and UDP 60014. Then verify that the WSC auth response advertises UDP 60015. Test login before matchmaking, records, and matches. If the hosted route has not been deployed, the game will continue to use Pretendo's existing response and this WSC server will not be reached.
-
-## Status honesty
-
-Successful image builds and container startup are not the same as a Wii U login. This guide becomes end-to-end only after the public Pretendo account route has been registered and a real console test succeeds. No public Pretendo or WiiLink DNS records are changed by this repository.
+CI/build success is not proof of live online play. Do not claim the game works online until a real console test passes.

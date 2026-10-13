@@ -63,3 +63,8 @@ To stop the local server, use the Stop button in Docker Desktop. The Mac must st
 A healthy container proves the processes can start together on your Mac. It does not verify console login, matchmaking, or online play. The default `localhost` advertised host is not reachable as a server address from a Wii U. A console test would require a suitable Mac LAN address plus an account/service-discovery route and network access; a school network may not permit inbound game traffic. Do not bypass school restrictions or alter the managed network settings.
 
 If your school does not permit publishing Docker images to a public Docker Hub account or adding GitHub Actions secrets, do not do those steps on the school account/device. Continue with the GitHub-hosted CI path instead.
+
+
+## Existing Pretendo PNIDs
+
+You do not need to create a second player account. The public account route and WSC auth server must share `WSC_NEX_PASSWORD_SECRET`; it is a server-side secret, not a PNID password. Do not invent a different secret on the Mac and expect Pretendo's route to match. Leave it unset for a local startup test; that uses the local database fallback and does not enable public Pretendo login.
