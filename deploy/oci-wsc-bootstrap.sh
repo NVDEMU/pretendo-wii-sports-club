@@ -20,6 +20,24 @@ docker compose version
 
 PUBLIC_IP="$(curl -4fsSL https://api.ipify.org)"
 [[ -n "$PUBLIC_IP" ]] || { echo "Could not determine public IPv4." >&2; exit 1; }
+: "${WSC_DUCKDNS_TOKEN:?Set WSC_DUCKDNS_TOKEN from your DuckDNS account before running}"
+[[ "$WSC_BRIDGE_DOMAIN" == *.duckdns.org ]] || { echo "WSC_BRIDGE_DOMAIN must be a DuckDNS subdomain ending in .duckdns.org." >&2; exit 1; }
+DUCKDNS_SUBDOMAIN="${WSC_BRIDGE_DOMAIN%.duckdns.org}"
+DUCKDNS_RESULT="$(curl -fsS --get \
+  --data-urlencode "domains=$DUCKDNS_SUBDOMAIN" \
+  --data-urlencode "token=$WSC_DUCKDNS_TOKEN" \
+  --data-urlencode "ip=$PUBLIC_IP" \
+  https://www.duckdns.org/update)"
+[[ "$DUCKDNS_RESULT" == "OK" ]] || { echo "DuckDNS did not accept the DNS update." >&2; exit 1; }
+DNS_READY=false
+for attempt in $(seq 1 30); do
+  if getent ahostsv4 "$WSC_BRIDGE_DOMAIN" | awk '{print $1}' | grep -Fxq "$PUBLIC_IP"; then
+    DNS_READY=true
+    break
+  fi
+  sleep 2
+done
+[[ "$DNS_READY" == true ]] || { echo "DuckDNS name did not resolve to the VM IP yet; retry after DNS propagation." >&2; exit 1; }
 
 STACK=/opt/pretendo-wii-sports-club
 if [[ ! -d "$STACK/.git" ]]; then

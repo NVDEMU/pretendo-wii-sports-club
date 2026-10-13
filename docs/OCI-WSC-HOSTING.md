@@ -15,7 +15,7 @@ Use a provider console to create Ubuntu 22.04 or 24.04 on an x86_64 Always Free-
 
 ## 2. Create a free HTTPS DNS name
 
-Register a free DuckDNS subdomain at https://www.duckdns.org/ and set its A record to the VM's public IPv4 address. Keep the DuckDNS update token private. Wait until the name resolves to the VM before continuing, because Caddy needs to obtain an HTTPS certificate. A domain is used only to secure the internal account-to-game-server bridge; the Wii U's NEX endpoint still advertises the VM's public IPv4.
+Register a free DuckDNS subdomain at https://www.duckdns.org/ and keep its update token private. The bootstrap updates that subdomain to the VM's public IPv4 and waits for DNS resolution before starting Caddy, because Caddy needs to obtain an HTTPS certificate. A domain is used only to secure the account-to-game-server bridge; the Wii U's NEX endpoint still advertises the VM's public IPv4.
 
 ## 3. Open cloud-network ingress
 
@@ -39,13 +39,14 @@ Inspect [the bootstrap script](../deploy/oci-wsc-bootstrap.sh), [the Compose ove
 set -eu
 export WSC_BRIDGE_DOMAIN="YOUR-SUBDOMAIN.duckdns.org"
 export ACME_EMAIL="YOUR-EMAIL-ADDRESS"
+export WSC_DUCKDNS_TOKEN="YOUR-DUCKDNS-UPDATE-TOKEN"
 apt-get update
 apt-get install -y curl
 curl -fsSL https://raw.githubusercontent.com/NVDEMU/pretendo-wii-sports-club/main/deploy/oci-wsc-bootstrap.sh -o /root/oci-wsc-bootstrap.sh
 bash /root/oci-wsc-bootstrap.sh
 ```
 
-The script installs Docker, creates random passwords and a bridge bearer token, writes a root-readable `.env`, and starts the WSC containers. The account bridge's public HTTPS path is:
+The script installs Docker, updates your DuckDNS A record to the instance IP, creates random passwords and a bridge bearer token, writes a root-readable `.env`, and starts the WSC containers. The DuckDNS token is used only to update the DNS record and is not written into the WSC `.env` or public logs. The account bridge's public HTTPS path is:
 
 ```text
 https://YOUR-SUBDOMAIN.duckdns.org/internal/wsc/nex-token
