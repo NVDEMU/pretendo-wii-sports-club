@@ -37,6 +37,10 @@ Do not configure these two resolver IPs as primary and secondary and expect reco
 - `config/wii-sports-club-endpoints.json` — machine-readable endpoint metadata with source URLs and confidence notes.
 - `docs/ENDPOINT-REFERENCE.md` — sourced game-server ID, access key, account API route, historical Nintendo endpoint, and community ports.
 - `docs/DEPLOYMENT.md` — public-server hosting, firewall, private account-service integration, and hardware verification sequence.
+- `docs/BROWSER-DEPLOYMENT.md` — browser-only cloud deployment guide; no local Terminal required.
+- `deploy/digitalocean-cloud-init.yaml` — first-boot setup to paste into a Droplet's Startup scripts field.
+- `.github/workflows/publish-containers.yml` — publishes runtime images only after main-branch CI passes.
+- `docker-compose.cloud.yml` — cloud runtime config with prebuilt images and persistent data volumes.
 - `scripts/smoke_test_internal_bridge.py` — end-to-end check of the internal token bridge against MongoDB.
 - `docs/SERVICE-DISCOVERY.md` — describes the Wii U account/service-discovery requirement.
 - `integrations/pretendo-account/provider-route.patch` — optional WSC-only bridge patch for a self-hosted or explicitly authorized Pretendo Account Server; see its [integration guide](integrations/pretendo-account/README.md).
