@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
@@ -149,6 +150,12 @@ func newInternalNEXTokenHandler(apiToken, publicHost string, publicPort uint16) 
 			}}},
 			options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After),
 		).Decode(&account)
+		// Concurrent first logins can race on the unique PID index. In that
+		// case, reuse the password created by the winning request rather than
+		// returning a transient error or generating a second account password.
+		if mongo.IsDuplicateKeyError(err) {
+			err = mongoCollection.FindOne(ctx, bson.D{{Key: "pid", Value: request.PID}}).Decode(&account)
+		}
 		if err != nil {
 			logger.Warning(fmt.Sprintf("Could not provision NEX credentials for PID %d: %v", request.PID, err))
 			http.Error(w, "could not store NEX credentials", http.StatusInternalServerError)

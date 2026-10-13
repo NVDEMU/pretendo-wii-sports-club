@@ -6,17 +6,30 @@ diff --git a/src/services/nnas/routes/provider.ts b/src/services/nnas/routes/pro
  import express from 'express';
 +import got from 'got';
  import xmlbuilder from 'xmlbuilder';
-@@ -143,6 +144,50 @@
+@@ -148,19 +148,62 @@
+ 	const nexAccount = await NEXAccount.findOne({
+ 		owning_pid: pnid.pid
+ 	});
+ 
+ 	if (!nexAccount) {
+ 		response.status(404).send(xmlbuilder.create({
+ 			errors: {
+ 				error: {
+ 					cause: '',
+ 					code: '0008',
+ 					message: 'Not Found'
+ 				}
+ 			}
  		}).end());
  
  		return;
  	}
  
-+	// WSC-only integration for an account server you operate or are authorized to modify.
-+	// Keep the target bridge on a private network; never expose its TCP port publicly.
-+	const gameServerID = getValueFromQueryString(request.query, 'game_server_id');
-+	const titleID = getValueFromHeaders(request.headers, 'x-nintendo-title-id');
-+	if (gameServerID?.toUpperCase() === '1012F100') {
++	// PNID PID and NEX/game PID are distinct in Pretendo's account model.
++	// Use the authenticated user's existing NEX account so client and game server agree on identity.
++	const wscGameServerID = getValueFromQueryString(request.query, 'game_server_id');
++	if (wscGameServerID?.toUpperCase() === '1012F100') {
++		const titleID = getValueFromHeaders(request.headers, 'x-nintendo-title-id');
 +		const allowedTitleIDs = new Set([
 +			'000500001012F100', '0005000010144C00', '0005000010144D00',
 +			'0005000010144E00', '0005000010171E00'
@@ -40,7 +53,7 @@ diff --git a/src/services/nnas/routes/provider.ts b/src/services/nnas/routes/pro
 +		try {
 +			const tokenXML = await got.post(bridgeURL, {
 +				headers: { authorization: 'Bearer ' + bridgeToken },
-+				json: { pid: pnid.pid },
++				json: { pid: nexAccount.pid },
 +				timeout: { request: 5000 },
 +				retry: { limit: 0 }
 +			}).text();
@@ -55,13 +68,4 @@ diff --git a/src/services/nnas/routes/provider.ts b/src/services/nnas/routes/pro
 +		}
 +		return;
 +	}
-+
- 	const nexAccount = await NEXAccount.findOne({
-@@ -166,3 +211,1 @@
--	const gameServerID = getValueFromQueryString(request.query, 'game_server_id');
--
- 	if (!gameServerID) {
-@@ -210,3 +253,1 @@
--	const titleID = getValueFromHeaders(request.headers, 'x-nintendo-title-id');
--
- 	if (!titleID) {
+ 	const gameServerID = getValueFromQueryString(request.query, 'game_server_id');

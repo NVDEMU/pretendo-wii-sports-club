@@ -15,10 +15,12 @@ class AccountRoutePatchSafetyTests(unittest.TestCase):
         cls.endpoints = json.loads(ENDPOINTS.read_text(encoding="utf-8"))
 
     def test_patch_targets_only_wsc_game_server_id(self):
-        self.assertIn("if (gameServerID?.toUpperCase() === '1012F100')", self.patch)
+        self.assertIn("if (wscGameServerID?.toUpperCase() === '1012F100')", self.patch)
         self.assertIn("const gameServerID = getValueFromQueryString(request.query, 'game_server_id');", self.patch)
-        # The old, generic route must remain below the WSC-only branch.
+        # The generic route remains after the WSC-only branch.
         self.assertIn("const nexAccount = await NEXAccount.findOne({", self.patch)
+        self.assertLess(self.patch.index("const nexAccount = await NEXAccount.findOne({"),
+                        self.patch.index("const wscGameServerID = getValueFromQueryString"))
 
     def test_patch_allowlist_matches_documented_title_id_candidates(self):
         match = re.search(r"const allowedTitleIDs = new Set\(\[([\s\S]*?)\]\);", self.patch)
@@ -31,8 +33,9 @@ class AccountRoutePatchSafetyTests(unittest.TestCase):
         self.assertEqual(set(ids), set(expected))
         self.assertEqual(len(ids), len(set(ids)))
 
-    def test_bridge_is_called_only_with_authenticated_pnid_pid(self):
-        self.assertIn("json: { pid: pnid.pid }", self.patch)
+    def test_bridge_uses_the_authenticated_users_existing_nex_pid(self):
+        self.assertIn("json: { pid: nexAccount.pid }", self.patch)
+        self.assertNotIn("json: { pid: pnid.pid }", self.patch)
         self.assertNotIn("request.body.pid", self.patch)
         self.assertNotIn("request.query.pid", self.patch)
         self.assertIn("process.env.WSC_INTERNAL_API_URL", self.patch)

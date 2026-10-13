@@ -44,6 +44,19 @@ func connectMongo() error {
 	mongoClient = client
 	mongoDatabase = client.Database(databaseName)
 	mongoCollection = mongoDatabase.Collection(collectionName)
+	// A PID must map to exactly one persistent NEX password. Without this
+	// unique index, concurrent first logins could create conflicting records.
+	_, err = mongoCollection.Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys:    bson.D{{Key: "pid", Value: 1}},
+		Options: options.Index().SetUnique(true).SetName("nexaccounts_pid_unique"),
+	})
+	if err != nil {
+		_ = client.Disconnect(context.Background())
+		mongoClient = nil
+		mongoDatabase = nil
+		mongoCollection = nil
+		return fmt.Errorf("ensure unique NEX PID index (resolve any duplicate PID records before startup): %w", err)
+	}
 	return nil
 }
 

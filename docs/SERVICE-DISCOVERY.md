@@ -37,7 +37,7 @@ Enable this route only when integrating with a trusted account proxy:
 - Set `NEX_AUTH_PUBLIC_HOST` to a public hostname/IP that routes to UDP 60014.
 - Optionally set `NEX_AUTH_PUBLIC_PORT` (defaults to 60014).
 - Keep TCP 8080 private on the Compose network. It is deliberately **not** published to the host.
-- The caller must authenticate the account and provide the PID resolved for that account. Never expose this internal route directly to the internet or accept a client-supplied PID without authentication.
+- The caller must authenticate the PNID, resolve its existing Pretendo NEX account, and provide that account's NEX/game PID (not the PNID's PID). Never expose this internal route directly to the internet or accept a client-supplied PID without authentication.
 
 This helper is **not** the Wii U-facing `account.nintendo.net` service and does not modify either provider's DNS. A compatible account proxy still needs to intercept the account-server request, authenticate it, call this helper, and return the XML response to the Wii U.
 

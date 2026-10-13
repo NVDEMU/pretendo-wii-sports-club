@@ -7,7 +7,7 @@ This guide records exactly what is ready and what still must be configured befor
 - The authentication and secure/game servers build in CI.
 - The single-container desktop image packages MongoDB and both WSC NEX servers; the current CI has successfully run its startup/health smoke test.
 - The desktop image can be started through Docker Desktop's graphical **Run** dialog without Terminal.
-- A WSC-only route patch exists for a **self-hosted account server you operate or are explicitly authorized to modify**. It uses the authenticated account's resolved PNID/PID and calls the private WSC token bridge.
+- A WSC-only route patch exists for a **self-hosted account server you operate or are explicitly authorized to modify**. It uses the authenticated PNID's existing NEX/game PID (not the PNID's own PID) and calls the private WSC token bridge.
 - The route patch is applied and TypeScript-checked by the account integration CI against the documented Pretendo Account Server baseline.
 
 **Not yet verified:** a live Wii U login, a public NEX session, or a real online match. No public account/service-discovery route is deployed by this repository.

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 import sys
@@ -72,23 +73,23 @@ def main() -> int:
     if status != 401:
         raise AssertionError(f"bad bearer token should return HTTP 401, got {status}")
 
-    first_status, first_headers, first_body = request(
-        args.url, "POST", token=token, payload={"pid": args.pid}
-    )
-    if first_status != 200:
-        raise AssertionError(f"valid request returned HTTP {first_status}: {first_body[:300]!r}")
-    if first_headers.get("Cache-Control", "").lower() != "no-store":
-        raise AssertionError("token response must carry Cache-Control: no-store")
-    first = parse_token_xml(first_body)
+    # Exercise simultaneous first-use requests against real MongoDB. They must
+    # all converge on one stable password for the same NEX PID.
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        replies = list(pool.map(
+            lambda _: request(args.url, "POST", token=token, payload={"pid": args.pid}),
+            range(8),
+        ))
+    parsed = []
+    for status, headers, body in replies:
+        if status != 200:
+            raise AssertionError(f"concurrent valid request returned HTTP {status}: {body[:300]!r}")
+        if headers.get("Cache-Control", "").lower() != "no-store":
+            raise AssertionError("token response must carry Cache-Control: no-store")
+        parsed.append(parse_token_xml(body))
 
-    second_status, _, second_body = request(
-        args.url, "POST", token=token, payload={"pid": args.pid}
-    )
-    if second_status != 200:
-        raise AssertionError(f"second valid request returned HTTP {second_status}")
-    second = parse_token_xml(second_body)
-
-    for data in (first, second):
+    first = parsed[0]
+    for data in parsed:
         if data["host"] != args.host:
             raise AssertionError(f"unexpected host: {data['host']!r}")
         if data["port"] != str(args.port):
@@ -102,12 +103,14 @@ def main() -> int:
         if data["token"] == data["nex_password"]:
             raise AssertionError("token and nex_password must be distinct")
 
-    if first["nex_password"] != second["nex_password"]:
-        raise AssertionError("NEX account password changed between requests for the same PID")
-    if first["token"] == second["token"]:
-        raise AssertionError("token should be freshly generated for each request")
+    passwords = {data["nex_password"] for data in parsed}
+    tokens = {data["token"] for data in parsed}
+    if len(passwords) != 1:
+        raise AssertionError("concurrent first logins created inconsistent NEX passwords")
+    if len(tokens) != len(parsed):
+        raise AssertionError("each request must receive a distinct session token")
 
-    print("PASS: private bridge auth, XML schema, no-store, stable PID password, and rotating token")
+    print("PASS: private bridge auth, XML schema, no-store, race-safe stable PID password, and unique rotating tokens")
     return 0
 
 
