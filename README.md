@@ -31,8 +31,11 @@ Do not configure these two resolver IPs as primary and secondary and expect reco
 - `wsc-secure/` — NEX secure/game service, including matchmaking and game data handlers.
 - `wsc-authentication/cmd/account-admin/` — command-line tool for provisioning a NEX password record for an existing PID.
 - `docker-compose.yml` — local deployment scaffold with MongoDB.
+- `config/wii-sports-club-endpoints.json` — machine-readable endpoint metadata with source URLs and confidence notes.
+- `docs/ENDPOINT-REFERENCE.md` — sourced game-server ID, access key, account API route, historical Nintendo endpoint, and community ports.
+- `docs/SERVICE-DISCOVERY.md` — explains the still-missing account/service-discovery bridge.
 - `scripts/check_dns_routing.py` — queries a selected resolver for a verified hostname; can check the expected IPv4 result.
-- `.github/workflows/ci.yml` — Go builds, Python DNS-parser tests, Compose validation, and container builds.
+- `.github/workflows/ci.yml` — Go builds, endpoint/DNS unit tests, Compose validation, and container builds.
 
 The server components are based on the GPL-3.0-licensed Wii Sports Club server code published by [BrewtendoNetwork/Wii-Sports-Club](https://github.com/BrewtendoNetwork/Wii-Sports-Club). The upstream license and attribution are retained. This is a separate community-maintained project, not an official Pretendo release.
 
@@ -68,9 +71,11 @@ Only set `NEX_ACCOUNTS_DATABASE=pretendo` and `NEX_ACCOUNTS_COLLECTION=wsc_nexac
 - [x] Make NEX account database/collection configurable and fail clearly if the DB is unavailable.
 - [x] Add a test-only account provisioning utility for existing PIDs.
 - [x] Add resolver-specific DNS preflight tooling and unit tests.
+- [x] Record sourced WSC NEX ID/access key, account-server token route, response fields, known title IDs, and historical Nintendo endpoint.
+- [x] Add endpoint metadata checks to CI.
 - [x] Add Compose validation and container builds to CI.
-- [ ] Capture the Wii U startup/service-discovery flow and confirm the exact hostnames and service response.
-- [ ] Integrate the authorized account/service-discovery path that makes clients select this secure-server URL.
+- [ ] Capture the Wii U startup to confirm the actual route used through each selected DNS profile.
+- [ ] Integrate an account/service-discovery path that safely returns this project's authentication host/port for game-server ID `1012F100`.
 - [ ] Verify Pretendo DNS and WiiLink DNS routing independently.
 - [ ] Add captured-packet regression tests for login, club data, rankings, matchmaking, and each sport.
 - [ ] Test on Wii U hardware and document which regions and modes are verified.
@@ -80,4 +85,6 @@ Only set `NEX_ACCOUNTS_DATABASE=pretendo` and `NEX_ACCOUNTS_COLLECTION=wsc_nexac
 - [Pretendo Wii U setup](https://pretendo.network/docs/install/wiiu)
 - [WiiLink DNS guide](https://wiilink.ca/guide/dns/)
 - [Pretendo Network NEX overview](https://nintendo-wiki.pretendo.network/docs/nex/)
+- [Endpoint reference maintained in this repo](docs/ENDPOINT-REFERENCE.md)
+- [Wii U account-server token API documentation](https://github.com/kinnay/NintendoClients/wiki/Account-Server)
 - [Upstream Wii Sports Club server source](https://github.com/BrewtendoNetwork/Wii-Sports-Club)
