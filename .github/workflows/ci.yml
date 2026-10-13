@@ -39,6 +39,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Validate macOS bootstrap script and Codespaces configuration
+        run: |
+          bash -n scripts/macos-local-start.sh
+          python -m json.tool .devcontainer/devcontainer.json > /dev/null
       - name: Test DNS packet parsing
         run: python -m unittest discover -s scripts/tests -v
 
