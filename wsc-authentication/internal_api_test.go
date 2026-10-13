@@ -2,11 +2,43 @@ package main
 
 import (
 	"bytes"
+	"encoding/base64"
+	"encoding/hex"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 )
+
+
+func TestSessionCredentialsUseSeparateFormats(t *testing.T) {
+	password, err := makeSessionPassword()
+	if err != nil {
+		t.Fatalf("makeSessionPassword returned an error: %v", err)
+	}
+	passwordBytes, err := hex.DecodeString(password)
+	if err != nil {
+		t.Fatalf("password is not hex-encoded: %v", err)
+	}
+	if len(passwordBytes) != 16 {
+		t.Fatalf("expected 16 random password bytes; got %d", len(passwordBytes))
+	}
+
+	token, err := makeSessionToken()
+	if err != nil {
+		t.Fatalf("makeSessionToken returned an error: %v", err)
+	}
+	tokenBytes, err := base64.StdEncoding.DecodeString(token)
+	if err != nil {
+		t.Fatalf("token is not base64-encoded: %v", err)
+	}
+	if len(tokenBytes) != 36 {
+		t.Fatalf("expected 36 random token bytes; got %d", len(tokenBytes))
+	}
+	if token == password {
+		t.Fatal("NEX token and session password must be separate credentials")
+	}
+}
 
 func TestValidPublicHost(t *testing.T) {
 	for _, host := range []string{"nex.example.net", "203.0.113.10", "2001:db8::1"} {
