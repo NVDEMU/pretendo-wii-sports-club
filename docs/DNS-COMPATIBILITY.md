@@ -2,48 +2,57 @@
 
 ## Goal
 
-The NEX authentication and secure-server processes should be DNS-provider-neutral. They advertise or accept reachable server endpoints; they should not inspect the player's resolver brand or change protocol behavior based on it.
+The NEX authentication and secure-server processes are resolver-neutral. They do not inspect which public DNS brand a player uses. To work in practice, however, the selected network path must route the game's service-discovery and advertised NEX endpoints to the right services.
 
-This repository aims to support players connecting through either:
+Official guides currently list:
 
-- **Pretendo SSSL DNS** — Pretendo's Wii U guide currently documents `88.198.140.154`.
-- **WiiLink DNS** — WiiLink's guide currently documents `167.235.229.36`. WiiLink's privacy policy says that some queries are forwarded to Pretendo Network and other services.
+- **Pretendo SSSL DNS:** `88.198.140.154` ([Pretendo Wii U setup](https://pretendo.network/docs/install/wiiu)).
+- **WiiLink DNS:** `167.235.229.36` ([WiiLink DNS guide](https://wiilink.ca/guide/dns/)).
 
-Official setup references:
-- [Pretendo — Wii U setup](https://pretendo.network/docs/install/wiiu)
-- [WiiLink — DNS guide](https://wiilink.ca/guide/dns/)
-- [WiiLink — privacy policy / DNS forwarding](https://wiilink.ca/privacy-policy/)
+These public IP addresses are DNS resolvers, not this project's server IP. The guides establish how to configure each service's DNS, but they do not establish that our yet-unregistered Wii Sports Club hostnames are already pointed to this project. We should not claim public DNS routing is complete until tested.
 
-## What this repository can and cannot control
+## Important distinction: resolver vs service discovery
 
-A custom game backend does **not** automatically receive traffic just because a console uses one of these DNS resolvers. The relevant service-discovery and hostname records must point clients at the right endpoints.
+A DNS resolver translates a hostname into records. Wii U NEX service discovery also involves the account/server-location path; see [SERVICE-DISCOVERY.md](SERVICE-DISCOVERY.md). The game must actually be told to connect to the custom endpoint. Configuring `SECURE_SERVER_LOCATION` only controls the station URL advertised by this repository's NEX authentication server once the client has reached that server; it does not make the client discover the authentication service in the first place.
 
-This project can configure the NEX service endpoint advertised by its authentication service through `SECURE_SERVER_LOCATION` and `SECURE_SERVER_PORT`. Set the location to a public hostname or IP that reaches this deployment. Both connection paths must be able to resolve and reach it.
+This repository cannot edit Pretendo's or WiiLink's public records. If those providers do not already route the relevant service hostnames to this project, a project-controlled DNS/HTTPS relay or a client/account-service integration will be required. Exact hostnames must come from trusted documentation or a packet capture; do not guess domains or redirect unrelated Nintendo services.
 
-This repository cannot modify Pretendo's or WiiLink's hosted DNS records. If the original Wii Sports Club service hostnames themselves must be redirected, the mapping must be supplied by the selected provider or by a project-controlled DNS relay/override. We must discover and verify those exact hostnames before adding records; do not guess Nintendo service domains or redirect unrelated Nintendo services.
+## Do not mix resolver IPs as a fake combined profile
 
-## Do not configure the two public resolver IPs as a pair
+The Wii U primary DNS resolver is used for lookups; the secondary resolver is generally a fallback, not a merge of both DNS databases. Setting Pretendo as primary and WiiLink as secondary does not guarantee that a hostname missing from Pretendo will be queried against WiiLink.
 
-A Wii U connection has a primary and secondary DNS setting. The second is a fallback if the first fails; it does not merge their records or select the best response per hostname. A compatible local/hosted relay should choose one upstream profile for each run:
+Test one path at a time:
 
-| Profile | Upstream |
+| Profile | Resolver queried by the preflight tool |
 | --- | --- |
 | `pretendo` | `88.198.140.154:53` |
 | `wiilink` | `167.235.229.36:53` |
 
-Those are upstream resolver addresses, not addresses of the Wii Sports Club game server. The current repo does not include a deployed DNS relay or public overrides yet, so these profile names are documentation for deployment planning rather than a claim that direct public DNS routing is already end-to-end verified.
+## DNS preflight tool
+
+Once a hostname is confirmed, query it via each profile:
+
+```sh
+python3 scripts/check_dns_routing.py --profile pretendo --hostname VERIFIED_HOSTNAME
+python3 scripts/check_dns_routing.py --profile wiilink --hostname VERIFIED_HOSTNAME
+```
+
+When an expected server IPv4 address is known, assert it:
+
+```sh
+python3 scripts/check_dns_routing.py --profile pretendo --hostname VERIFIED_HOSTNAME --expected-ip 203.0.113.20
+```
+
+Replace both example values with values from the deployment and real service configuration. The tool checks an A/CNAME answer from the selected resolver; it does not update DNS, discover game hostnames, check TLS, or prove that UDP traffic reaches the NEX server.
 
 ## Validation checklist
 
-For each profile, verify all of the following before advertising it as working:
+For each DNS profile separately:
 
-1. Confirm the canonical account/service-discovery hostnames from a real Wii U capture or trusted upstream documentation.
-2. Confirm each relevant hostname resolves to the intended account and game endpoints when using that profile.
-3. Confirm the advertised NEX secure-server host and UDP port are reachable from an external network.
-4. Test authentication with a test account provisioned in the expected account store.
-5. Test sport/region flows independently; Wii Sports Club uses multiple services and regional club behavior.
-6. Record tested firmware, game region, DNS profile, resolver results, and packet traces in the repository without uploading passwords, tokens, or account secrets.
-
-## Account-service caveat
-
-The authentication service currently queries `pretendo.wsc_nexaccounts` in MongoDB for a PID/password record. The local Compose stack creates MongoDB but does not provision Pretendo IDs or bridge the Pretendo account service. Without correctly provisioned account records or an intended account-backend integration, successful game login is not guaranteed even when DNS and UDP reachability work.
+1. Capture startup traffic and confirm all account/service-discovery hostnames.
+2. Verify the service-discovery response advertises this project's intended NEX host and port.
+3. Query confirmed hostnames through the selected resolver and verify expected answers.
+4. Check the public UDP ports from a real external network.
+5. Test authentication with a dedicated account provisioned in the configured store.
+6. Test sports, regional clubs, rankings, and matchmaking independently.
+7. Record firmware, game region, DNS profile, resolver answers, and redacted packet notes. Never publish passwords, tickets, auth tokens, or raw authenticated payloads.
