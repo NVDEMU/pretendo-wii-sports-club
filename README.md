@@ -46,19 +46,15 @@ Do not configure these two resolver IPs as primary and secondary and expect reco
 
 The server components are based on the GPL-3.0-licensed Wii Sports Club server code published by [BrewtendoNetwork/Wii-Sports-Club](https://github.com/BrewtendoNetwork/Wii-Sports-Club). The upstream license and attribution are retained. This is a separate community-maintained project, not an official Pretendo release.
 
-## Quick start for a Mac
+## Browser-only quick start (no Terminal required)
 
-You do **not** need to install Linux. Install [Docker Desktop for Mac](https://docs.docker.com/desktop/setup/install/mac-install/), open it, then run these commands in Terminal:
+You can build and test repository changes entirely from GitHub's website. Open the [Browser-only quick start](docs/BROWSER-ONLY-QUICKSTART.md), then visit [GitHub Actions](https://github.com/NVDEMU/pretendo-wii-sports-club/actions). Select **WSC Build & Integration Tests (browser-run)**, click **Run workflow**, keep branch `main), and click **Run workflow** again. The tests also run automatically after every commit.
 
-```sh
-git clone https://github.com/NVDEMU/pretendo-wii-sports-club.git
-cd pretendo-wii-sports-club
-bash scripts/macos-local-start.sh
-```
+This hosted workflow compiles and tests both services, checks DNS/configuration logic, builds the containers, and smoke-tests the internal NEX bridge against a temporary MongoDB container. No local Terminal, Go, Python, or Linux installation is needed.
 
-The script creates local-only development secrets if `.env` does not already exist, starts MongoDB and both server containers, and runs an end-to-end check of the private bridge. It preserves an existing `.env`; if that file is incomplete, review the error rather than posting the file anywhere. Full steps and a browser-based alternative are in [the macOS/Codespaces quickstart](docs/MACOS-QUICKSTART.md).
+For developers who do have Terminal available, see the [macOS/Codespaces quickstart](docs/MACOS-QUICKSTART.md).
 
-**Important:** this local setup advertises `localhost` and is for testing only. It does not make the service reachable from the Internet or a Wii U. Actual online tests still need a public host with inbound UDP 60014/60015 and an authorized, compatible account/service-discovery route.
+**Important:** GitHub's test environment is temporary. Passing tests does not deploy a public server or prove Wii U login/online play. Actual online tests still need a public host with inbound UDP 60014/60015 and an authorized, compatible account/service-discovery route.
 
 ## General Docker Compose setup
 
