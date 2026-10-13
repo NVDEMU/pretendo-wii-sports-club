@@ -1,0 +1,42 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - wsc_mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  wsc-secure:
+    build:
+      context: ./wsc-secure
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017/}
+      KERBEROS_PASSWORD: ${KERBEROS_PASSWORD:?Set KERBEROS_PASSWORD in .env}
+    ports:
+      - "60015:60015/udp"
+
+  wsc-authentication:
+    build:
+      context: ./wsc-authentication
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017/}
+      KERBEROS_PASSWORD: ${KERBEROS_PASSWORD:?Set KERBEROS_PASSWORD in .env}
+      SECURE_SERVER_LOCATION: ${SECURE_SERVER_LOCATION:?Set SECURE_SERVER_LOCATION in .env}
+      SECURE_SERVER_PORT: ${SECURE_SERVER_PORT:-60015}
+    ports:
+      - "60014:60014/udp"
+
+volumes:
+  wsc_mongo_data:
