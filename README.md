@@ -34,6 +34,8 @@ Do not configure these two resolver IPs as primary and secondary and expect reco
 - `docker-compose.yml` — local deployment scaffold with MongoDB.
 - `config/wii-sports-club-endpoints.json` — machine-readable endpoint metadata with source URLs and confidence notes.
 - `docs/ENDPOINT-REFERENCE.md` — sourced game-server ID, access key, account API route, historical Nintendo endpoint, and community ports.
+- `docs/DEPLOYMENT.md` — Linux VPS setup, firewall, private account-service integration, and hardware verification sequence.
+- `scripts/smoke_test_internal_bridge.py` — end-to-end check of the internal token bridge against MongoDB.
 - `docs/SERVICE-DISCOVERY.md` — describes the Wii U account/service-discovery requirement.
 - `integrations/pretendo-account/provider-route.patch` — optional WSC-only bridge patch for a self-hosted or explicitly authorized Pretendo Account Server; see its [integration guide](integrations/pretendo-account/README.md).
 - `scripts/check_dns_routing.py` — queries a selected resolver for a verified hostname; can check the expected IPv4 result.
