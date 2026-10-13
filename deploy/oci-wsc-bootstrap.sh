@@ -1,43 +1,20 @@
 #!/usr/bin/env bash
-# Installs the WSC game servers and a TLS-protected token bridge on a VM you control.
-# Designed for Ubuntu 22.04/24.04 on an Oracle Cloud Always Free-eligible VM (AMD or Arm).
+# Optional bootstrap for a public WSC game host. No custom domain or HTTPS bridge required.
 set -Eeuo pipefail
-export TERM=${TERM:-xterm}
-
-: "${WSC_BRIDGE_DOMAIN:?Set WSC_BRIDGE_DOMAIN to your DNS name before running}"
-: "${ACME_EMAIL:?Set ACME_EMAIL to an email for HTTPS certificate registration}"
+LOG_FILE=/var/log/wsc-bootstrap.log
+exec > >(tee -a "$LOG_FILE") 2>&1
 
 if [[ "$(id -u)" -ne 0 ]]; then
-  echo "Run this bootstrap as root." >&2
+  echo "Run as root or through cloud-init." >&2
   exit 1
 fi
+: "${WSC_NEX_PASSWORD_SECRET:?Set WSC_NEX_PASSWORD_SECRET to the shared value configured for the account route}"
 
 apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl git openssl ufw docker.io docker-compose-v2
 systemctl enable --now docker
-docker version
-docker compose version
-
 PUBLIC_IP="$(curl -4fsSL https://api.ipify.org)"
-[[ -n "$PUBLIC_IP" ]] || { echo "Could not determine public IPv4." >&2; exit 1; }
-: "${WSC_DUCKDNS_TOKEN:?Set WSC_DUCKDNS_TOKEN from your DuckDNS account before running}"
-[[ "$WSC_BRIDGE_DOMAIN" == *.duckdns.org ]] || { echo "WSC_BRIDGE_DOMAIN must be a DuckDNS subdomain ending in .duckdns.org." >&2; exit 1; }
-DUCKDNS_SUBDOMAIN="${WSC_BRIDGE_DOMAIN%.duckdns.org}"
-DUCKDNS_RESULT="$(curl -fsS --get \
-  --data-urlencode "domains=$DUCKDNS_SUBDOMAIN" \
-  --data-urlencode "token=$WSC_DUCKDNS_TOKEN" \
-  --data-urlencode "ip=$PUBLIC_IP" \
-  https://www.duckdns.org/update)"
-[[ "$DUCKDNS_RESULT" == "OK" ]] || { echo "DuckDNS did not accept the DNS update." >&2; exit 1; }
-DNS_READY=false
-for attempt in $(seq 1 30); do
-  if getent ahostsv4 "$WSC_BRIDGE_DOMAIN" | awk '{print $1}' | grep -Fxq "$PUBLIC_IP"; then
-    DNS_READY=true
-    break
-  fi
-  sleep 2
-done
-[[ "$DNS_READY" == true ]] || { echo "DuckDNS name did not resolve to the VM IP yet; retry after DNS propagation." >&2; exit 1; }
+[[ -n "$PUBLIC_IP" ]] || { echo "Unable to determine public IPv4" >&2; exit 1; }
 
 STACK=/opt/pretendo-wii-sports-club
 if [[ ! -d "$STACK/.git" ]]; then
@@ -45,41 +22,28 @@ if [[ ! -d "$STACK/.git" ]]; then
 fi
 cd "$STACK"
 
-# Keep all secrets on this VM. The generated bridge token is shared only with the authorized
-# Pretendo account-service operator over a private channel; never put it in GitHub or a public issue.
 umask 077
-cat > .env <<EOF
+if [[ ! -f .env ]]; then
+  cat > .env <<EOF
 KERBEROS_PASSWORD=$(openssl rand -hex 32)
-WSC_INTERNAL_API_TOKEN=$(openssl rand -hex 32)
+WSC_NEX_PASSWORD_SECRET=$WSC_NEX_PASSWORD_SECRET
 SECURE_SERVER_LOCATION=$PUBLIC_IP
 SECURE_SERVER_PORT=60015
-NEX_AUTH_PUBLIC_HOST=$PUBLIC_IP
-NEX_AUTH_PUBLIC_PORT=60014
-WSC_BRIDGE_DOMAIN=$WSC_BRIDGE_DOMAIN
-ACME_EMAIL=$ACME_EMAIL
+MONGO_URI=mongodb://mongo:27017/
+NEX_ACCOUNTS_DATABASE=wsc
+NEX_ACCOUNTS_COLLECTION=nexaccounts
 EOF
-chmod 0600 .env
+  chmod 0600 .env
+fi
 
-# Open only the HTTPS certificate endpoints and the two WSC UDP service ports in the guest firewall.
-# Add matching OCI VCN ingress rules separately; restrict SSH and DNS administration to your own IP.
 ufw allow 22/tcp
-ufw allow 80/tcp
-ufw allow 443/tcp
 ufw allow 60014/udp
 ufw allow 60015/udp
-ufw delete allow 8080/tcp >/dev/null 2>&1 || true
 ufw --force enable
+docker compose -f docker-compose.cloud.yml up -d
+docker compose -f docker-compose.cloud.yml ps
 
-# Build sequentially so the smaller Always Free VM shapes do not run two Go builds at once.
-docker compose --parallel 1 -f docker-compose.yml -f docker-compose.public.yml build
-docker compose -f docker-compose.yml -f docker-compose.public.yml up -d
-docker compose -f docker-compose.yml -f docker-compose.public.yml ps
-
-echo
-echo "WSC server host: $PUBLIC_IP"
-echo "NEX authentication: UDP 60014"
-echo "NEX secure/game server: UDP 60015"
-echo "HTTPS token bridge: https://$WSC_BRIDGE_DOMAIN/internal/wsc/nex-token"
-echo "Private bridge bearer token is stored in $STACK/.env; do not display or post that value publicly."
-echo "TCP 8080 and MongoDB are not published to the Internet."
-echo "This starts the game server. Pretendo's hosted account/service-discovery route still needs operator-side registration."
+echo "WSC containers started on $PUBLIC_IP"
+echo "NEX auth UDP 60014; secure/game UDP 60015"
+echo "No domain or public token bridge required."
+echo "The authorized account route must advertise $PUBLIC_IP:60014 and use the same password secret."

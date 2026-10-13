@@ -30,7 +30,8 @@ ENV MONGO_URI=mongodb://127.0.0.1:27017/ \
     NEX_ACCOUNTS_COLLECTION=nexaccounts \
     SECURE_SERVER_LOCATION=localhost \
     SECURE_SERVER_PORT=60015 \
-    WSC_DATASTORE_PATH=/data/datastore.json
+    WSC_DATASTORE_PATH=/data/datastore.json \
+    WSC_NEX_PASSWORD_SECRET=""
 USER mongodb
 EXPOSE 60014/udp 60015/udp
 HEALTHCHECK --interval=10s --timeout=4s --start-period=30s --retries=6 \
