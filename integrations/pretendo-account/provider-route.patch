@@ -5,15 +5,14 @@ diff --git a/src/services/nnas/routes/provider.ts b/src/services/nnas/routes/pro
  import { TokenType } from '@/types/common/token-types';
 +import { SystemType } from '@/types/common/system-types';
  import { IndependentServiceToken } from '@/models/independent-service-token';
-@@ -166,1 +166,67 @@
+@@ -166,1 +166,66 @@
 +	// WSC-only route for Wii Sports Club; all other game routes remain unchanged.
 +	// This uses the authenticated player's existing Pretendo NEX PID; it does not change account records.
 +	const wscGameServerID = getValueFromQueryString(request.query, 'game_server_id');
 +	if (wscGameServerID?.toUpperCase() === '1012F100') {
 +		const titleID = getValueFromHeaders(request.headers, 'x-nintendo-title-id');
++		const allowedTitleIDs = new Set([
 +			'000500001012F100', '0005000010144C00', '0005000010144D00',
-+			'0005000010144E00', '0005000010171E00'
-+			'0005000010144E00', '0005000010144D00',
 +			'0005000010144E00', '0005000010171E00'
 +		]);
 +		if (!titleID || !allowedTitleIDs.has(titleID.toUpperCase())) {
