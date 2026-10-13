@@ -73,7 +73,7 @@ jobs:
           push: true
           tags: |
             ${{ matrix.image }}:main
-            ${{ matrix.image }}:${{ github.event.workflow_run.head_sha }
+            ${{ matrix.image }}:${{ github.event.workflow_run.head_sha }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.event.workflow_run.head_sha }}
