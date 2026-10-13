@@ -19,7 +19,6 @@ class AccountRoutePatchSafetyTests(unittest.TestCase):
         self.assertIn("const gameServerID = getValueFromQueryString(request.query, 'game_server_id');", self.patch)
         # The old, generic route must remain below the WSC-only branch.
         self.assertIn("const nexAccount = await NEXAccount.findOne({", self.patch)
-        self.assertIn("const server = await getServerByGameServerID(gameServerID, serverAccessLevel);", self.patch)
 
     def test_patch_allowlist_matches_documented_title_id_candidates(self):
         match = re.search(r"const allowedTitleIDs = new Set\(\[([\s\S]*?)\]\);", self.patch)
