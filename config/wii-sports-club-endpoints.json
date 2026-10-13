@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "title": "Wii Sports Club",
+  "platform": "Wii U",
+  "game_server_id": "1012F100",
+  "access_key": "4d324052",
+  "nex_server_configuration": {
+    "protocol": "PRUDP V1",
+    "prudp_version": 1,
+    "prudp_minor_version": 3,
+    "server_nex_version": "3.4.0",
+    "configured_in": [
+      "wsc-authentication/main.go",
+      "wsc-secure/main.go"
+    ],
+    "community_auth_endpoint": {
+      "transport": "UDP",
+      "port": 60014,
+      "source": "RevivetendoOpenSource/relaylink/nexgames.go",
+      "status": "reference configuration; set public host through account service-discovery integration"
+    },
+    "community_secure_endpoint": {
+      "transport": "UDP",
+      "port": 60015,
+      "config_host_variable": "SECURE_SERVER_LOCATION",
+      "config_port_variable": "SECURE_SERVER_PORT",
+      "status": "reference configuration; secure station URL is returned by the community NEX authentication service"
+    }
+  },
+  "service_discovery": {
+    "scheme": "https",
+    "host": "account.nintendo.net",
+    "path": "/v1/api/provider/nex_token/@me",
+    "method": "GET",
+    "query": {
+      "game_server_id": "1012F100"
+    },
+    "response_format": "XML",
+    "response_fields": [
+      "host",
+      "port",
+      "pid",
+      "nex_password",
+      "token"
+    ],
+    "client_certificate": "The documented Wii U account server requires the common client certificate.",
+    "status": "The route and request shape are documented. This repo does not currently implement or control the account server endpoint.",
+    "expected_flow": [
+      "Wii U requests a NEX token for game_server_id 1012F100 from the account/service-discovery endpoint.",
+      "That response supplies the public host and UDP port for this project's NEX authentication server, plus the PID and credentials.",
+      "The NEX authentication server issues/validates its ticket and advertises the secure server host/port.",
+      "The Wii U connects to the secure server for game data, rankings, and matchmaking."
+    ]
+  },
+  "title_ids": {
+    "confirmed_by_pretendo_nex_viewer": [
+      "000500001012F100",
+      "0005000010144D00",
+      "0005000010144E00",
+      "0005000010171E00"
+    ],
+    "additionally_reported_by_revivetendo_title_map": [
+      "0005000010144C00"
+    ],
+    "note": "Published sources differ on the complete regional/title-ID set. Keep all observed values as candidates until verified against installed title metadata or real request headers."
+  },
+  "historical_nintendo_endpoint": {
+    "hostname": null,
+    "ipv4": "34.208.166.202",
+    "transport": "UDP",
+    "port": 43480,
+    "access_key": "4d324052",
+    "branch": "branch:origin/project/appsp",
+    "client_build": "build:3_4_24_4_0",
+    "source": "kinnay/kinnay.github.io data/nexwiiu.json",
+    "status": "Historical endpoint data only; do not use as the community server address. Nintendo discontinued Wii U online play and online communication services on 2024-04-08."
+  },
+  "dns_resolvers": {
+    "pretendo_sssl": {
+      "ipv4": "88.198.140.154",
+      "role": "DNS resolver / SSSL entry point, not the community NEX game server"
+    },
+    "wiilink": {
+      "ipv4": "167.235.229.36",
+      "role": "DNS resolver, not the community NEX game server"
+    },
+    "constraint": "This repo cannot change either provider's public DNS records. The Wii U must receive a service-discovery response that points game_server_id 1012F100 at the community authentication endpoint. DNS settings alone do not accomplish that."
+  },
+  "evidence": [
+    {
+      "claim": "Wii U game-server locations come from the account server route /provider/nex_token/@me.",
+      "url": "https://nintendo-wiki.pretendo.network/docs/nex/"
+    },
+    {
+      "claim": "Wii U account host and common client certificate details.",
+      "url": "https://github.com/kinnay/NintendoClients/wiki/Account-Server"
+    },
+    {
+      "claim": "Wii Sports Club game server ID, access key, title IDs, and NEX protocol settings.",
+      "url": "https://github.com/PretendoNetwork/nex-viewer/blob/master/src/nex/titles/wii-sports-club.ts"
+    },
+    {
+      "claim": "Historical original server IP, UDP port, build branch, build string, and access key.",
+      "url": "https://github.com/kinnay/kinnay.github.io/blob/master/data/nexwiiu.json"
+    },
+    {
+      "claim": "Community NEX auth/secure ports and game server ID/access key/NEX version used by an existing WSC implementation.",
+      "url": "https://github.com/Happynico7504/RevivetendoOpenSource/blob/master/relaylink/nexgames.go"
+    },
+    {
+      "claim": "Nintendo discontinuation date for Wii U online play.",
+      "url": "https://en-americas-support.nintendo.com/app/answers/detail/a_id/63227/p/605"
+    }
+  ]
+}
