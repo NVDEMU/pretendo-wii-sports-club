@@ -8,6 +8,7 @@ on:
       - completed
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,9 +16,10 @@ permissions:
 jobs:
   publish:
     if: >-
-      ${{ github.event.workflow_run.conclusion == 'success' &&
-          github.event.workflow_run.event == 'push' &&
-          github.event.workflow_run.head_repository.full_name == github.repository }}
+      ${{ github.event_name == 'workflow_dispatch' ||
+          (github.event.workflow_run.conclusion == 'success' &&
+           github.event.workflow_run.event == 'push' &&
+           github.event.workflow_run.head_repository.full_name == github.repository) }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -36,17 +38,17 @@ jobs:
             file: ./deploy/Dockerfile.desktop
             image: ghcr.io/nvdemu/pretendo-wii-sports-club-desktop
     steps:
-      - name: Check out the exact commit that passed CI
+      - name: Check out the tested commit or selected main revision
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0
 
       - name: Skip publishing if main has moved on
         id: current
         shell: bash
         env:
-          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
           set -euo pipefail
           CURRENT_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
@@ -55,7 +57,7 @@ jobs:
             echo "Publishing tested main commit $TESTED_SHA"
           else
             echo "is_current=false" >> "$GITHUB_OUTPUT"
-            echo "Skipping stale test result: main is $CURRENT_SHA, tested commit was $TESTED_SHA"
+            echo "Skipping stale test result: main is $CURRENT_SHA, selected commit was $TESTED_SHA"
           fi
 
       - name: Set up Docker Buildx
@@ -79,10 +81,10 @@ jobs:
           push: true
           tags: |
             ${{ matrix.image }}:main
-            ${{ matrix.image }}:${{ github.event.workflow_run.head_sha }}
+            ${{ matrix.image }}:${{ github.event.workflow_run.head_sha || github.sha }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.event.workflow_run.head_sha }}
+            org.opencontainers.image.revision=${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Check whether Docker Hub publishing is configured
         id: dockerhub
@@ -118,7 +120,7 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/pretendo-wii-sports-club-desktop:main
-            ${{ secrets.DOCKERHUB_USERNAME }}/pretendo-wii-sports-club-desktop:${{ github.event.workflow_run.head_sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/pretendo-wii-sports-club-desktop:${{ github.event.workflow_run.head_sha || github.sha }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.event.workflow_run.head_sha }}
+            org.opencontainers.image.revision=${{ github.event.workflow_run.head_sha || github.sha }}
