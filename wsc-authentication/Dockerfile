@@ -10,5 +10,5 @@ FROM gcr.io/distroless/static-debian12:nonroot
 WORKDIR /app
 COPY --from=build /out/server ./server
 COPY --from=build /out/account-admin ./account-admin
-EXPOSE 60014/udp
+EXPOSE 60014/udp 8080/tcp
 ENTRYPOINT ["./server"]
