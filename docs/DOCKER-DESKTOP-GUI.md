@@ -6,11 +6,9 @@ This is the graphical, school-Mac-friendly way to start a **local testing copy**
 
 ## A. Get a runnable image
 
-The simplest route is to use the already-published GitHub Container Registry image, if the latest successful CI run has published it: `ghcr.io/nvdemu/pretendo-wii-sports-club-desktop:main`. You do **not** need to create a cloud VM or a Docker Hub account for local testing. If the image is not available yet, open [GitHub Actions](../actions), run **WSC Build & Integration Tests (browser-run)**, and check that all jobs pass; the publish workflow only runs after a successful main-branch test. If GHCR has no `main` image, the Docker Hub publishing method below is an optional fallback—not a prerequisite for development.
+The WSC image has been built and published to GitHub Container Registry (GHCR), but Docker Desktop's documented GUI pull workflow is for Docker Hub. Since this guide is for users who cannot use Terminal, the **browser-only route is to publish a copy to your Docker Hub account**. This does not host your game server on Docker Hub; it only stores the downloadable image.
 
-### Optional fallback: publish through your own Docker Hub account
-
-Docker Desktop's image search is designed around Docker Hub. Only use this fallback if the GHCR image is unavailable and you want to pull through the GUI without a command line.
+You do not need a cloud VM. Do not follow these steps on a school-managed account/device if your school does not allow creating registry accounts, publishing public images, or adding GitHub Actions secrets.
 
 1. Sign up for a free [Docker Personal account](https://hub.docker.com/signup). Docker Personal includes public repositories at no cost; see [current plan details](https://www.docker.com/products/personal/).
 2. In [Docker Hub](https://hub.docker.com/), choose **My Hub → Repositories → Create repository**.
@@ -19,23 +17,18 @@ Docker Desktop's image search is designed around Docker Hub. Only use this fallb
 5. In this GitHub repository, open **Settings → Secrets and variables → Actions → New repository secret**. Add these two secrets:
    - Name: `DOCKERHUB_USERNAME`; value: your Docker Hub username.
    - Name: `DOCKERHUB_TOKEN`; value: the token you just created (not your Docker password).
-6. Open [GitHub Actions](../actions), choose **WSC Build & Integration Tests (browser-run)**, click **Run workflow**, keep the branch set to `main`, and confirm. Wait for every CI job to pass. The publisher then builds from that exact tested commit and uploads the GUI bundle to Docker Hub when both secrets are present. Confirm that `main` and a commit-SHA tag appear on Docker Hub. Do not manually publish an untested revision.
+6. After both secrets are saved, open [GitHub Actions](../actions), choose **WSC Build & Integration Tests (browser-run)**, click **Run workflow**, keep the branch set to `main`, and confirm. Wait for all CI jobs to pass and for **Publish tested WSC containers** to finish. The publisher uploads the desktop image to Docker Hub automatically when both secrets are present. Confirm that the `main` tag appears in your Docker Hub repository. Do not manually publish an untested revision.
 
 GitHub secrets are entered directly in GitHub's settings page and are not committed to the repository. Never paste the token into source code, an issue, a chat, or a public log. Official instructions: [GitHub Actions repository secrets](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets).
 
 ## B. Get the image into Docker Desktop
 
-**Important:** Docker Desktop's Images search/Pull controls are for Docker Hub; they do not provide a generic pull button for GitHub Container Registry (GHCR). The GHCR image is published, but to fetch it directly you need to run one command in macOS Terminal:
+1. Open Docker Desktop and make sure its engine is running.
+2. Select **Images** and choose **Search images to run** (or use the Docker Desktop search control).
+3. Search for `YOUR_DOCKERHUB_USERNAME/pretendo-wii-sports-club-desktop`, using the Docker Hub username whose credentials you stored in GitHub.
+4. Select the `main` tag and click **Pull**. If it is not available, check that the GitHub Actions secrets are correct and that **Publish tested WSC containers** completed successfully.
 
-```sh
-docker pull ghcr.io/nvdemu/pretendo-wii-sports-club-desktop:main
-```
-
-This downloads the image into Docker's local image store. After it finishes, return to Docker Desktop → **Images**; the image should appear there, and you can use the GUI for the rest of the steps.
-
-If the command reports `denied` or `unauthorized`, the package is probably private. To allow anonymous pulls, open the [desktop package settings](https://github.com/users/NVDEMU/packages/container/pretendo-wii-sports-club-desktop), choose **Package settings → Change visibility → Public**, and confirm. **Public means anyone can download the image, and GitHub does not allow a public package to be changed back to private.** If you prefer not to make it public or use Terminal, use the optional Docker Hub publishing route above instead; that needs Docker Hub credentials stored as GitHub Actions secrets.
-
-Docker's GUI can run and manage images after they're in the local image store: [Explore the Images view](https://docs.docker.com/desktop/use-desktop/images/).
+Docker Desktop's image details show the image size and provide actions for removing it later. See [Docker's Images view guide](https://docs.docker.com/desktop/use-desktop/images/).
 
 ## C. Run the container in the GUI
 
@@ -65,6 +58,12 @@ The image starts a local MongoDB instance, then launches the authentication serv
 If it exits, check the same Logs view for the first error. Do not share environment-variable values or passwords in screenshots.
 
 To stop the local server, use the Stop button in Docker Desktop. The Mac must stay awake with Docker Desktop running for the container to stay available.
+
+## Storage use and cleanup
+
+**Yes, this uses storage on the Mac.** Docker stores downloaded images, containers, and their data inside Docker Desktop's disk image. The exact space used can vary by build; after pulling, check the image's **Size** column or open its details in **Images**. Docker Desktop's **Settings → Resources → Advanced** also shows actual disk usage and the disk-image location. See [Docker's macOS storage guidance](https://docs.docker.com/desktop/troubleshoot-and-support/faqs/macfaqs/).
+
+To reclaim space using the GUI, stop and remove the `wsc-local` container, then delete its desktop image from **Images**. If you also want to erase the saved local database and game data, remove its associated volume from **Volumes**; deleting that volume permanently deletes the test data. Removing the container/image alone might leave a persistent volume behind.
 
 ## What local hosting proves
 
