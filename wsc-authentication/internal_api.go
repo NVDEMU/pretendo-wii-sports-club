@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/subtle"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/xml"
@@ -57,12 +58,20 @@ func validPublicHost(host string) bool {
 	return true
 }
 
-func makeSessionToken() (string, error) {
+func makeSessionPassword() (string, error) {
 	randomBytes := make([]byte, 16)
+	if _, err := rand.Read(randomBytes); err != nil {
+		return "", fmt.Errorf("generate NEX session password: %w", err)
+	}
+	return hex.EncodeToString(randomBytes), nil
+}
+
+func makeSessionToken() (string, error) {
+	randomBytes := make([]byte, 36)
 	if _, err := rand.Read(randomBytes); err != nil {
 		return "", fmt.Errorf("generate NEX session token: %w", err)
 	}
-	return hex.EncodeToString(randomBytes), nil
+	return base64.StdEncoding.EncodeToString(randomBytes), nil
 }
 
 func newInternalNEXTokenHandler(apiToken, publicHost string, publicPort uint16) http.Handler {
@@ -112,10 +121,16 @@ func newInternalNEXTokenHandler(apiToken, publicHost string, publicPort uint16) 
 			return
 		}
 
+		password, err := makeSessionPassword()
+		if err != nil {
+			logger.Warning(err.Error())
+			http.Error(w, "could not issue NEX credentials", http.StatusInternalServerError)
+			return
+		}
 		token, err := makeSessionToken()
 		if err != nil {
 			logger.Warning(err.Error())
-			http.Error(w, "could not issue NEX token", http.StatusInternalServerError)
+			http.Error(w, "could not issue NEX credentials", http.StatusInternalServerError)
 			return
 		}
 
@@ -126,19 +141,19 @@ func newInternalNEXTokenHandler(apiToken, publicHost string, publicPort uint16) 
 			bson.D{{Key: "pid", Value: request.PID}},
 			bson.D{{Key: "$set", Value: bson.D{
 				{Key: "pid", Value: request.PID},
-				{Key: "password", Value: token},
+				{Key: "password", Value: password},
 			}}},
 			options.Update().SetUpsert(true),
 		)
 		if err != nil {
-			logger.Warning(fmt.Sprintf("Could not store NEX token for PID %d: %v", request.PID, err))
+			logger.Warning(fmt.Sprintf("Could not store NEX session password for PID %d: %v", request.PID, err))
 			http.Error(w, "could not store NEX token", http.StatusInternalServerError)
 			return
 		}
 
 		response := internalNEXTokenResponse{
 			Host:        publicHost,
-			NexPassword: token,
+			NexPassword: password,
 			PID:         request.PID,
 			Port:        publicPort,
 			Token:       token,
@@ -155,7 +170,7 @@ func newInternalNEXTokenHandler(apiToken, publicHost string, publicPort uint16) 
 		w.Header().Set("Pragma", "no-cache")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(append([]byte(xml.Header), body...))
-		fmt.Printf("Issued WSC NEX session credential for PID %d\n", request.PID)
+		fmt.Printf("Issued WSC NEX session credentials for PID %d\n", request.PID)
 	})
 	return mux
 }
