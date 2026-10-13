@@ -121,7 +121,7 @@ func newInternalNEXTokenHandler(apiToken, publicHost string, publicPort uint16) 
 			return
 		}
 
-		password, err := makeSessionPassword()
+		passwordCandidate, err := makeSessionPassword()
 		if err != nil {
 			logger.Warning(err.Error())
 			http.Error(w, "could not issue NEX credentials", http.StatusInternalServerError)
@@ -136,18 +136,28 @@ func newInternalNEXTokenHandler(apiToken, publicHost string, publicPort uint16) 
 
 		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 		defer cancel()
-		_, err = mongoCollection.UpdateOne(
+		// NEX account passwords are stable per PID; only the separate token is
+		// rotated per request. $setOnInsert prevents one request from invalidating
+		// another request's login by changing an established account password.
+		var account bson.M
+		err = mongoCollection.FindOneAndUpdate(
 			ctx,
 			bson.D{{Key: "pid", Value: request.PID}},
-			bson.D{{Key: "$set", Value: bson.D{
+			bson.D{{Key: "$setOnInsert", Value: bson.D{
 				{Key: "pid", Value: request.PID},
-				{Key: "password", Value: password},
+				{Key: "password", Value: passwordCandidate},
 			}}},
-			options.Update().SetUpsert(true),
-		)
+			options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After),
+		).Decode(&account)
 		if err != nil {
-			logger.Warning(fmt.Sprintf("Could not store NEX session password for PID %d: %v", request.PID, err))
-			http.Error(w, "could not store NEX token", http.StatusInternalServerError)
+			logger.Warning(fmt.Sprintf("Could not provision NEX credentials for PID %d: %v", request.PID, err))
+			http.Error(w, "could not store NEX credentials", http.StatusInternalServerError)
+			return
+		}
+		password, ok := account["password"].(string)
+		if !ok || password == "" {
+			logger.Warning(fmt.Sprintf("NEX account password is missing or invalid for PID %d", request.PID))
+			http.Error(w, "NEX account credentials are invalid", http.StatusInternalServerError)
 			return
 		}
 
