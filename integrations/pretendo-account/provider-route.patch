@@ -6,7 +6,7 @@ diff --git a/src/services/nnas/routes/provider.ts b/src/services/nnas/routes/pro
  import express from 'express';
 +import got from 'got';
  import xmlbuilder from 'xmlbuilder';
-@@ -143,6 +144,47 @@
+@@ -143,6 +144,48 @@
  		}).end());
  
  		return;
@@ -27,7 +27,7 @@ diff --git a/src/services/nnas/routes/provider.ts b/src/services/nnas/routes/pro
 +			} } }).end());
 +			return;
 +		}
-+		
++
 +		const bridgeURL = process.env.WSC_INTERNAL_API_URL ||
 +			'http://wsc-authentication:8080/internal/wsc/nex-token';
 +		const bridgeToken = process.env.WSC_INTERNAL_API_TOKEN;
@@ -53,13 +53,13 @@ diff --git a/src/services/nnas/routes/provider.ts b/src/services/nnas/routes/pro
 +		}
 +		return;
 +	}
- 
++
  	const nexAccount = await NEXAccount.findOne({
-@@ -166,3 +208,1 @@
+@@ -166,3 +209,1 @@
 -	const gameServerID = getValueFromQueryString(request.query, 'game_server_id');
 -
  	if (!gameServerID) {
-@@ -210,3 +250,1 @@
+@@ -210,3 +251,1 @@
 -	const titleID = getValueFromHeaders(request.headers, 'x-nintendo-title-id');
 -
  	if (!titleID) {
