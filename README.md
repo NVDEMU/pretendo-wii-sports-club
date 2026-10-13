@@ -4,6 +4,8 @@ A community project exploring replacement online services for **Wii Sports Club 
 
 > **Status: work in progress.** This repository is not affiliated with Nintendo, Pretendo Network, or WiiLink. The services compile and container images build, but end-to-end Wii U login and online play have not yet been verified.
 
+> **Budget note:** no paid hosting is required to continue development. Follow the [zero-cost plan](docs/FREE-PLAN.md) to keep working through GitHub's web editor and free CI. Public online play needs a continuously reachable server, which remains on hold until genuinely free hosting or a volunteer host is available.
+
 ## Goals
 
 - Recreate the authentication and secure game-server services required by Wii Sports Club.
@@ -38,6 +40,7 @@ Do not configure these two resolver IPs as primary and secondary and expect reco
 - `docs/ENDPOINT-REFERENCE.md` — sourced game-server ID, access key, account API route, historical Nintendo endpoint, and community ports.
 - `docs/DEPLOYMENT.md` — public-server hosting, firewall, private account-service integration, and hardware verification sequence.
 - `docs/BROWSER-DEPLOYMENT.md` — browser-only cloud deployment guide; no local Terminal required.
+- `docs/FREE-PLAN.md` — zero-cost development/test roadmap; use this before considering any cloud host.
 - `deploy/digitalocean-cloud-init.yaml` — first-boot setup to paste into a Droplet's Startup scripts field.
 - `.github/workflows/publish-containers.yml` — publishes runtime images only after main-branch CI passes.
 - `docker-compose.cloud.yml` — cloud runtime config with prebuilt images and persistent data volumes.
