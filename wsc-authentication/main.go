@@ -26,6 +26,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	startInternalNEXTokenAPI()
+
 	nexServer = nex.NewServer()
 	nexServer.SetPRUDPVersion(1)
 	nexServer.SetPRUDPProtocolMinorVersion(3)
