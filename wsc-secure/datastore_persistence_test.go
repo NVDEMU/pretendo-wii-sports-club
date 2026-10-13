@@ -77,10 +77,6 @@ func TestDataStoreSnapshotPersistsAcrossReload(t *testing.T) {
 			t.Errorf("MetaBinary[%d] = 0x%02x, want 0x%02x", i, got.MetaBinary[i], want.MetaBinary[i])
 		}
 	}
-	if got.Updated == nil {
-		// time.Time is serialized as an object, not a pointer; this line is
-		// intentionally avoided below because zero timestamps are valid data.
-	}
 	if nextID := atomic.LoadUint64(&dsNextID); nextID != 42 {
 		t.Errorf("next DataStore ID = %d, want 42", nextID)
 	}
