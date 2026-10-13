@@ -50,8 +50,8 @@ fi
 
 # Read only the expected 64-hex-character token value; never execute .env as shell code.
 api_token="$(sed -n 's/^WSC_INTERNAL_API_TOKEN=//p' .env | tail -n 1)"
-if [[ ! "$api_token" =~ ^[[:xdigit:]]{64}$ ]]; then
-  echo "Your .env must contain WSC_INTERNAL_API_TOKEN with a 64-character hexadecimal secret." >&2
+if [[ ${#api_token} -lt 32 ]]; then
+  echo "Your .env must contain WSC_INTERNAL_API_TOKEN with at least 32 characters." >&2
   echo "To preserve your config, this script did not overwrite .env. Review .env locally and retry." >&2
   exit 1
 fi
