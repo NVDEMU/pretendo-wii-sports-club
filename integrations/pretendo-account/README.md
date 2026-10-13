@@ -16,7 +16,7 @@ Pretendo Account Server has a route in `src/services/nnas/routes/provider.ts`. I
 - Make the account-server process reach `http://wsc-authentication:8080/internal/wsc/nex-token` over a private network only. If they are not on the same Docker network, use a private address reachable only by the account server. Never publish the helper port to the public Internet.
 - Test using a dedicated test account and verify the returned XML and NEX login before trying actual matches.
 
-The private bridge generates a session password, saves it to this project's configured Mongo collection so the authentication server can look it up by PID, and returns a separate random value in the XML `token` field. Treat the bridge as an internal service; it is not the Wii U-facing account API.
+The private bridge provisions a random NEX account password on first use of a PID and reuses that stored password for later requests. It returns a separate random value in the XML `token` field for each request. This prevents concurrent token requests from changing the password during login. Treat the bridge as an internal service; it is not the Wii U-facing account API.
 
 ## Public DNS-provider limitation
 
