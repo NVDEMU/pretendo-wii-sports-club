@@ -21,6 +21,11 @@ class PublicDeploymentTests(unittest.TestCase):
         self.assertNotIn("8080:8080", str(self.compose))
         self.assertNotIn("27017:27017", str(self.compose))
 
+    def test_local_compose_host_ports_are_configurable_for_smoke_tests(self):
+        local_compose = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
+        self.assertIn("${WSC_AUTH_HOST_PORT:-60014}:60014/udp", local_compose)
+        self.assertIn("${WSC_SECURE_HOST_PORT:-60015}:60015/udp", local_compose)
+
     def test_shared_hmac_secret_is_required_for_public_runtime(self):
         auth = self.compose["services"]["wsc-authentication"]
         self.assertIn("WSC_NEX_PASSWORD_SECRET", auth["environment"])
