@@ -24,7 +24,7 @@ services:
     volumes:
       - wsc_secure_data:/data
     ports:
-      - "60015:60015/udp"
+      - "${WSC_SECURE_HOST_PORT:-60015}:60015/udp"
 
   wsc-authentication:
     build:
@@ -45,7 +45,7 @@ services:
       NEX_AUTH_PUBLIC_HOST: ${NEX_AUTH_PUBLIC_HOST:-}
       NEX_AUTH_PUBLIC_PORT: ${NEX_AUTH_PUBLIC_PORT:-60014}
     ports:
-      - "60014:60014/udp"
+      - "${WSC_AUTH_HOST_PORT:-60014}:60014/udp"
 
 volumes:
   wsc_mongo_data:
