@@ -22,10 +22,16 @@ GitHub secrets are entered directly in GitHub's settings page and are not commit
 
 ## B. Get the image into Docker Desktop
 
-1. Open Docker Desktop and make sure its engine is running.
-2. Select **Images** and choose **Search images to run** (or use the Docker Desktop search control).
-3. Search for `YOUR_DOCKERHUB_USERNAME/pretendo-wii-sports-club-desktop`, using the Docker Hub username whose credentials you stored in GitHub.
-4. Select the `main` tag and click **Pull**. If it is not available, check that the GitHub Actions secrets are correct and that **Publish tested WSC containers** completed successfully.
+**Do not pull an image named only `main`.** `main` is the tag, not the repository name. The complete image name is:
+
+```text
+nvd123yt/pretendo-wii-sports-club-desktop:main
+```
+
+1. Open the [exact Docker Hub tags page](https://hub.docker.com/r/nvd123yt/pretendo-wii-sports-club-desktop/tags) in your browser and confirm that `main` is listed.
+2. In Docker Desktop, use the image search/pull control and enter the **entire image name above**, not just `main` and not a copied URL.
+3. If Docker Desktop only lists an image/tag called `main`, do not select that entry as the WSC image; it does not identify the repository by itself.
+4. If the full name still returns 404, open the linked Docker Hub page while signed in and confirm that the repository exists under `nvd123yt` and is public. The OS selector does not cause a registry 404.
 
 Docker Desktop's image details show the image size and provide actions for removing it later. See [Docker's Images view guide](https://docs.docker.com/desktop/use-desktop/images/).
 
