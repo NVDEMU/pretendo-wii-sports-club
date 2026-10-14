@@ -50,7 +50,7 @@ Do not configure these two resolver IPs as primary and secondary and expect reco
 - `docs/FREE-PLAN.md` — zero-cost development/test roadmap; use this before considering any cloud host.
 - `deploy/digitalocean-cloud-init.yaml` — first-boot setup to paste into a Droplet's Startup scripts field.
 - `.github/workflows/publish-containers.yml` — publishes runtime images only after main-branch CI passes.
-  Optional Docker Hub publishing is enabled by adding `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` as repository Actions secrets, so the desktop image can be pulled through Docker Desktop's GUI.
+  Optional Docker Hub publishing is enabled by adding `DOCKERHUB_USERNAME` as a repository Actions variable (the username is public) and `DOCKERHUB_TOKEN` as a repository Actions secret (the token stays private), so the desktop image can be pulled through Docker Desktop's GUI.
 - `docker-compose.cloud.yml` — cloud runtime config with prebuilt images and persistent data volumes.
 - `scripts/smoke_test_internal_bridge.py` — end-to-end check of the internal token bridge against MongoDB.
 - `docs/SERVICE-DISCOVERY.md` — describes the Wii U account/service-discovery requirement.
