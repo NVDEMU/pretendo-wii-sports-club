@@ -19,6 +19,8 @@ jobs:
           (github.event.workflow_run.event == 'push' ||
            github.event.workflow_run.event == 'workflow_dispatch') }}
     runs-on: ubuntu-latest
+    # Bound each matrix job so a stalled registry request cannot leave Actions running indefinitely.
+    timeout-minutes: 15
     permissions:
       contents: read
       packages: write
@@ -125,6 +127,7 @@ jobs:
 
       - name: Verify Docker Hub image access and publish its direct link
         if: steps.dockerhub.outputs.ready == 'true'
+        timeout-minutes: 5
         shell: bash
         env:
           DOCKERHUB_USERNAME: nvd123yt
@@ -147,11 +150,23 @@ jobs:
           # not a manifest inspection that might accidentally reuse login state.
           anonymous_config="$(mktemp -d)"
           export DOCKER_CONFIG="$anonymous_config"
-          if docker pull "$image"; then
+          trap 'rm -rf "$anonymous_config"' EXIT
+
+          # A full pull is useful validation, but it must never block the publisher
+          # indefinitely if the registry or network stalls.
+          set +e
+          timeout --signal=TERM --kill-after=15s 240s docker pull "$image"
+          pull_status=$?
+          set -e
+          if [[ "$pull_status" -eq 0 ]]; then
             echo "Anonymous Docker Hub pull verified: $image"
             printf '%s\n' '- Anonymous Docker Hub image pull: **passed**' >> "$GITHUB_STEP_SUMMARY"
+          elif [[ "$pull_status" -eq 124 || "$pull_status" -eq 137 ]]; then
+            echo "::error::Anonymous Docker Hub pull timed out after 4 minutes for $image."
+            printf '%s\n' '- Anonymous Docker Hub image pull: **TIMED OUT after 4 minutes**. Image upload may have succeeded, but public downloading is not yet verified.' >> "$GITHUB_STEP_SUMMARY"
+            exit 1
           else
-            echo "::error::Anonymous Docker Hub pull failed for $image. Confirm the repository is Public and that the main tag exists under nvd123yt."
-            printf '%s\n' '- Anonymous Docker Hub image pull: **FAILED**. The image is not anonymously downloadable; check repository visibility, namespace, and the main tag.' >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::Anonymous Docker Hub pull failed (exit $pull_status) for $image. Confirm the repository is Public and that the main tag exists under nvd123yt."
+            printf '%s\n' "- Anonymous Docker Hub image pull: **FAILED** (exit $pull_status). Check repository visibility, namespace, and the main tag." >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
