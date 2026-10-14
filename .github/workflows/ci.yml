@@ -142,6 +142,10 @@ jobs:
           WSC_INTERNAL_API_TOKEN=${WSC_INTERNAL_API_TOKEN}
           NEX_AUTH_PUBLIC_HOST=wsc-smoke.example.invalid
           NEX_AUTH_PUBLIC_PORT=60014
+          # Reserve non-default host ports for the isolated CI smoke test. The
+          # bridge assertions use the container network and still expect 60014.
+          WSC_AUTH_HOST_PORT=16014
+          WSC_SECURE_HOST_PORT=16015
           MONGO_URI=mongodb://mongo:27017/
           NEX_ACCOUNTS_DATABASE=wsc
           NEX_ACCOUNTS_COLLECTION=nexaccounts
