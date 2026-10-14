@@ -91,7 +91,7 @@ jobs:
               matrix.image == 'ghcr.io/nvdemu/pretendo-wii-sports-club-desktop' }}
         shell: bash
         env:
-          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME || secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
           if [[ -n "$DOCKERHUB_USERNAME" && -n "$DOCKERHUB_TOKEN" ]]; then
@@ -106,7 +106,7 @@ jobs:
         if: steps.dockerhub.outputs.ready == 'true'
         uses: docker/login-action@v3
         with:
-          username: ${{ vars.DOCKERHUB_USERNAME }}
+          username: ${{ vars.DOCKERHUB_USERNAME || secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and publish the GUI bundle to Docker Hub
@@ -117,8 +117,8 @@ jobs:
           file: ./deploy/Dockerfile.desktop
           push: true
           tags: |
-            ${{ vars.DOCKERHUB_USERNAME }}/pretendo-wii-sports-club-desktop:main
-            ${{ vars.DOCKERHUB_USERNAME }}/pretendo-wii-sports-club-desktop:${{ github.event.workflow_run.head_sha }}
+            ${{ vars.DOCKERHUB_USERNAME || secrets.DOCKERHUB_USERNAME }}/pretendo-wii-sports-club-desktop:main
+            ${{ vars.DOCKERHUB_USERNAME || secrets.DOCKERHUB_USERNAME }}/pretendo-wii-sports-club-desktop:${{ github.event.workflow_run.head_sha }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.event.workflow_run.head_sha }}
@@ -127,15 +127,20 @@ jobs:
         if: steps.dockerhub.outputs.ready == 'true'
         shell: bash
         env:
-          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME || secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_PUBLIC_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
         run: |
           set -uo pipefail
           image="${DOCKERHUB_USERNAME}/pretendo-wii-sports-club-desktop:main"
-          url="https://hub.docker.com/r/${DOCKERHUB_USERNAME}/pretendo-wii-sports-club-desktop"
           {
             printf '%s\n' '### Docker Desktop download'
-            printf '%s\n' "- Open the published Docker Hub image: $url"
-            printf '%s\n' "- Exact image name: $image"
+            if [[ -n "$DOCKERHUB_PUBLIC_USERNAME" ]]; then
+              url="https://hub.docker.com/r/${DOCKERHUB_PUBLIC_USERNAME}/pretendo-wii-sports-club-desktop"
+              printf '%s\n' "- [Open the published Docker Hub image]($url)"
+              printf '%s\n' "- Exact image name: ${DOCKERHUB_PUBLIC_USERNAME}/pretendo-wii-sports-club-desktop:main"
+            else
+              printf '%s\n' '- Open Docker Hub → My Hub → Repositories → pretendo-wii-sports-club-desktop. The image username is still taken from the existing username secret; add the optional DOCKERHUB_USERNAME variable only if you want a direct link in this summary.'
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
           # Verify the tag is publicly pullable without credentials.
@@ -144,7 +149,7 @@ jobs:
             echo "Anonymous Docker Hub access verified."
             printf '%s\n' '- Anonymous pull check: **passed**' >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "::error::Anonymous Docker Hub pull failed. Open the linked repository and set Visibility to Public, then verify the main tag."
-            printf '%s\n' '- Anonymous pull check: **FAILED**. Open the linked repository settings and make it public; verify the main tag.' >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::Anonymous Docker Hub pull failed. Open Docker Hub while signed in, go to the desktop image repository settings, set it to Public, and verify the main tag."
+            printf '%s\n' '- Anonymous pull check: **FAILED**. Check visibility is Public and confirm the main tag exists.' >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
