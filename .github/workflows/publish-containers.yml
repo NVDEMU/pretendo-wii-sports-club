@@ -143,13 +143,15 @@ jobs:
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
-          # Verify the tag is publicly pullable without credentials.
-          docker logout >/dev/null 2>&1 || true
-          if docker manifest inspect "$image" >/dev/null 2>&1; then
-            echo "Anonymous Docker Hub access verified."
-            printf '%s\n' '- Anonymous pull check: **passed**' >> "$GITHUB_STEP_SUMMARY"
+          # Use an empty Docker config so this is a real anonymous layer pull,
+          # not a manifest inspection that might accidentally reuse login state.
+          anonymous_config="$(mktemp -d)"
+          export DOCKER_CONFIG="$anonymous_config"
+          if docker pull "$image"; then
+            echo "Anonymous Docker Hub pull verified: $image"
+            printf '%s\n' '- Anonymous Docker Hub image pull: **passed**' >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "::error::Anonymous Docker Hub pull failed. Open Docker Hub while signed in, go to the desktop image repository settings, set it to Public, and verify the main tag."
-            printf '%s\n' '- Anonymous pull check: **FAILED**. Check visibility is Public and confirm the main tag exists.' >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::Anonymous Docker Hub pull failed for $image. Confirm the repository is Public and that the main tag exists under nvd123yt."
+            printf '%s\n' '- Anonymous Docker Hub image pull: **FAILED**. The image is not anonymously downloadable; check repository visibility, namespace, and the main tag.' >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
